@@ -683,7 +683,7 @@ export const PatientBooking: React.FC<PatientBookingProps> = ({
                   </div>
                   <div>
                     <div className="text-xs font-bold text-white">Mercado Pago / CVU</div>
-                    <div className="text-[11px] text-slate-400">Odonto Merlo Centro Odontológico</div>
+                    <div className="text-[11px] text-slate-400">Colsul Policonsultorio Médico</div>
                   </div>
                 </div>
                 <QrCode className="w-6 h-6 text-sky-400" />

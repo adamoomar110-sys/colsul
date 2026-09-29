@@ -377,7 +377,7 @@ export const Settings: React.FC<SettingsProps> = ({
 
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-teal-50 border border-teal-200 text-teal-800 text-xs font-bold">
           <Sparkles className="w-4 h-4 text-teal-600" />
-          <span>Odonto Merlo v1.6</span>
+          <span>Colsul v2.0</span>
         </div>
       </div>
 
@@ -557,7 +557,7 @@ export const Settings: React.FC<SettingsProps> = ({
                 required
                 value={tempClinicName}
                 onChange={e => setTempClinicName(e.target.value)}
-                placeholder="Ej: Odonto Merlo"
+                placeholder="Ej: Colsul Policonsultorio"
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-teal-500 focus:outline-none text-sm font-semibold text-slate-800"
               />
             </div>

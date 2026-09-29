@@ -229,14 +229,14 @@ export const Appointments: React.FC<AppointmentsProps> = ({
   };
 
   const generateWhatsAppMessage = (app: Appointment) => {
-    const text = `Hola ${app.patientName}, te recordamos tu turno en *Odonto Merlo* el día ${app.date} a las ${app.time} hs con ${app.dentistName} (${app.specialty}). Por favor confirma tu asistencia respondiendo a este mensaje. ¡Te esperamos!`;
+    const text = `Hola ${app.patientName}, te recordamos tu turno en *Colsul Policonsultorio* el día ${app.date} a las ${app.time} hs con ${app.dentistName} (${app.specialty}). Por favor confirma tu asistencia respondiendo a este mensaje. ¡Te esperamos!`;
     const encoded = encodeURIComponent(text);
     const cleanPhone = app.patientPhone.replace(/[^0-9]/g, '');
     window.open(`https://wa.me/${cleanPhone}?text=${encoded}`, '_blank');
   };
 
   const generateWhatsAppImprevistoMessage = (app: Appointment) => {
-    const text = `Hola ${app.patientName}, te contactamos desde *Odonto Merlo* por un imprevisto de fuerza mayor con tu turno del día ${app.date} a las ${app.time} hs (${app.specialty}). Nos gustaría reprogramar tu cita. Por favor dinos qué horario te queda cómodo. ¡Muchas gracias!`;
+    const text = `Hola ${app.patientName}, te contactamos desde *Colsul Policonsultorio* por un imprevisto de fuerza mayor con tu turno del día ${app.date} a las ${app.time} hs (${app.specialty}). Nos gustaría reprogramar tu cita. Por favor dinos qué horario te queda cómodo. ¡Muchas gracias!`;
     const encoded = encodeURIComponent(text);
     const cleanPhone = app.patientPhone.replace(/[^0-9]/g, '');
     window.open(`https://wa.me/${cleanPhone}?text=${encoded}`, '_blank');
