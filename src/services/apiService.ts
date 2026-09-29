@@ -215,5 +215,48 @@ export const apiService = {
       console.warn('No se pudo descargar la base completa desde MySQL:', err);
       return null;
     }
+  },
+
+  /**
+   * Obtiene la lista de personas que se registraron al ingresar a la app
+   */
+  async getRegistros(): Promise<AppAccessRecord[]> {
+    try {
+      const res = await fetch(`${getApiBase()}/registro.php`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      if (data.success && Array.isArray(data.registros)) {
+        return data.registros;
+      }
+      return [];
+    } catch (err) {
+      console.warn('Error al consultar registros de acceso:', err);
+      return [];
+    }
+  },
+
+  /**
+   * Elimina un registro de acceso de la base de datos
+   */
+  async deleteRegistro(id: number): Promise<boolean> {
+    try {
+      const res = await fetch(`${getApiBase()}/registro.php?id=${id}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      return !!data.success;
+    } catch (err) {
+      console.warn('Error al eliminar registro de acceso:', err);
+      return false;
+    }
   }
 };
+
+export interface AppAccessRecord {
+  id: number;
+  nombre: string;
+  celular: string;
+  usuario: string;
+  fecha_registro: string;
+}
+

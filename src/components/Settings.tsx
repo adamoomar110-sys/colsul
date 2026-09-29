@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from 'react';
-import { Building2, UserPlus, Stethoscope, ShieldCheck, Phone, Mail, FileBadge, Check, Trash2, Edit2, Sparkles, Save, Download, Upload, Database, RefreshCw, AlertCircle, Palette, RotateCcw, Clock, Calendar, Server, CheckCircle2, CloudLightning } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Building2, UserPlus, Stethoscope, ShieldCheck, Phone, Mail, FileBadge, Check, Trash2, Edit2, Sparkles, Save, Download, Upload, Database, RefreshCw, AlertCircle, Palette, RotateCcw, Clock, Calendar, Server, CheckCircle2, CloudLightning, MessageCircle, Eye, Users } from 'lucide-react';
 import { Dentist, Patient, Appointment, Budget, ConditionType, ClinicScheduleConfig, DayOfWeek, DaySchedule } from '../types';
 import { CONDITION_METAS, DEFAULT_CLINIC_SCHEDULE } from '../data/mockData';
+import { apiService, AppAccessRecord } from '../services/apiService';
 
 interface SettingsProps {
   clinicName: string;
@@ -159,6 +160,34 @@ export const Settings: React.FC<SettingsProps> = ({
       setDbStatusMsg({ text: e.message || 'Error al descargar datos del servidor', type: 'error' });
     } finally {
       setDbLoading(false);
+    }
+  };
+
+  // Estado local para Registros de Acceso de Usuarios
+  const [registros, setRegistros] = useState<AppAccessRecord[]>([]);
+  const [loadingRegistros, setLoadingRegistros] = useState(false);
+
+  const fetchRegistros = async () => {
+    setLoadingRegistros(true);
+    try {
+      const data = await apiService.getRegistros();
+      setRegistros(data);
+    } catch (e) {
+      console.warn('Error al cargar registros de acceso:', e);
+    } finally {
+      setLoadingRegistros(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRegistros();
+  }, []);
+
+  const handleDeleteRegistro = async (id: number) => {
+    if (!window.confirm('¿Deseas eliminar este registro de acceso?')) return;
+    const ok = await apiService.deleteRegistro(id);
+    if (ok) {
+      setRegistros(prev => prev.filter(r => r.id !== id));
     }
   };
 
@@ -944,6 +973,91 @@ export const Settings: React.FC<SettingsProps> = ({
             </div>
           </div>
         )}
+
+        {/* Tabla de Personas Registradas que usan la App */}
+        <div className="pt-5 border-t border-slate-800 space-y-3">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center space-x-2">
+              <Users className="w-4 h-4 text-teal-400" />
+              <h4 className="font-bold text-white text-sm">
+                Personas Registradas que usan la App ({registros.length})
+              </h4>
+            </div>
+            <button
+              onClick={fetchRegistros}
+              disabled={loadingRegistros}
+              className="text-xs text-teal-400 hover:text-teal-300 flex items-center gap-1 font-semibold px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 hover:bg-slate-700 transition cursor-pointer"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loadingRegistros ? 'animate-spin' : ''}`} />
+              <span>Actualizar Registros</span>
+            </button>
+          </div>
+
+          <p className="text-xs text-slate-400">
+            Aquí quedan guardados todos los usuarios que ingresan su Nombre y Celular en la pantalla de bienvenida.
+          </p>
+
+          {registros.length === 0 ? (
+            <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-800 text-center text-xs text-slate-500">
+              No hay personas registradas aún en la base de datos MySQL.
+            </div>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-900/80 text-slate-400 uppercase text-[10px] font-bold border-b border-slate-800">
+                  <tr>
+                    <th className="py-2.5 px-3">Fecha y Hora</th>
+                    <th className="py-2.5 px-3">Nombre Completo</th>
+                    <th className="py-2.5 px-3">Celular</th>
+                    <th className="py-2.5 px-3">Rol / Usuario</th>
+                    <th className="py-2.5 px-3 text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800 text-slate-300">
+                  {registros.map((reg) => {
+                    const cleanPhone = reg.celular.replace(/[^0-9]/g, '');
+                    return (
+                      <tr key={reg.id} className="hover:bg-slate-900/50 transition">
+                        <td className="py-2.5 px-3 font-mono text-[11px] text-slate-400 whitespace-nowrap">
+                          {reg.fecha_registro}
+                        </td>
+                        <td className="py-2.5 px-3 font-bold text-white whitespace-nowrap">
+                          {reg.nombre}
+                        </td>
+                        <td className="py-2.5 px-3 whitespace-nowrap">
+                          <a
+                            href={`https://wa.me/${cleanPhone}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 font-mono text-xs transition"
+                            title="Abrir chat en WhatsApp"
+                          >
+                            <MessageCircle className="w-3.5 h-3.5" />
+                            <span>{reg.celular}</span>
+                          </a>
+                        </td>
+                        <td className="py-2.5 px-3 whitespace-nowrap">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-500/20 text-teal-300 border border-teal-500/30 uppercase">
+                            {reg.usuario || 'Usuario'}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3 text-right whitespace-nowrap">
+                          <button
+                            onClick={() => handleDeleteRegistro(reg.id)}
+                            className="p-1 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded transition cursor-pointer"
+                            title="Eliminar registro"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* SECCIÓN 6: LISTADO Y ESTADO DE ODONTÓLOGOS DEL STAFF */}

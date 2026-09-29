@@ -20,7 +20,13 @@ export const Registro: React.FC<RegistroProps> = ({ usuarioLogin, onDone }) => {
     setError('');
 
     try {
-      const response = await fetch('/api/registro.php', {
+      const apiEndpoint = window.location.pathname.includes('/colsul') 
+        ? '/colsul/api/registro.php' 
+        : window.location.pathname.includes('/odonto')
+        ? '/odonto/api/registro.php'
+        : './api/registro.php';
+
+      const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
