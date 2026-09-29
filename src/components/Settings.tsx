@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Building2, UserPlus, Stethoscope, ShieldCheck, Phone, Mail, FileBadge, Check, Trash2, Edit2, Sparkles, Save, Download, Upload, Database, RefreshCw, AlertCircle, Palette, RotateCcw, Clock, Calendar, Server, CheckCircle2, CloudLightning, MessageCircle, Eye, Users } from 'lucide-react';
+import { Building2, UserPlus, Stethoscope, ShieldCheck, Phone, Mail, FileBadge, Check, Trash2, Edit2, Sparkles, Save, Download, Upload, Database, RefreshCw, AlertCircle, Palette, RotateCcw, Clock, Calendar, Server, CheckCircle2, CloudLightning, MessageCircle, Eye, Users, Lock, Unlock, KeyRound } from 'lucide-react';
 import { Dentist, Patient, Appointment, Budget, ConditionType, ClinicScheduleConfig, DayOfWeek, DaySchedule } from '../types';
 import { CONDITION_METAS, DEFAULT_CLINIC_SCHEDULE } from '../data/mockData';
 import { apiService, AppAccessRecord } from '../services/apiService';
@@ -163,29 +163,61 @@ export const Settings: React.FC<SettingsProps> = ({
     }
   };
 
-  // Estado local para Registros de Acceso de Usuarios
+  // Estado local para Registros de Acceso de Usuarios (Protegido por Clave de Programador)
   const [registros, setRegistros] = useState<AppAccessRecord[]>([]);
   const [loadingRegistros, setLoadingRegistros] = useState(false);
+  const [adminUser, setAdminUser] = useState('');
+  const [adminPass, setAdminPass] = useState('');
+  const [isDevUnlocked, setIsDevUnlocked] = useState(false);
+  const [authError, setAuthError] = useState('');
 
-  const fetchRegistros = async () => {
+  const handleUnlockRegistros = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adminUser.trim() || !adminPass.trim()) {
+      setAuthError('Por favor ingresá usuario y contraseña de programador');
+      return;
+    }
     setLoadingRegistros(true);
+    setAuthError('');
     try {
-      const data = await apiService.getRegistros();
-      setRegistros(data);
-    } catch (e) {
-      console.warn('Error al cargar registros de acceso:', e);
+      const res = await apiService.getRegistros(adminUser.trim(), adminPass.trim());
+      if (res.success) {
+        setRegistros(res.registros);
+        setIsDevUnlocked(true);
+      } else {
+        setAuthError(res.message || 'Usuario o contraseña de programador incorrectos.');
+      }
+    } catch (e: any) {
+      setAuthError('Error de conexión: ' + e.message);
     } finally {
       setLoadingRegistros(false);
     }
   };
 
-  useEffect(() => {
-    fetchRegistros();
-  }, []);
+  const handleRefreshRegistros = async () => {
+    if (!isDevUnlocked) return;
+    setLoadingRegistros(true);
+    try {
+      const res = await apiService.getRegistros(adminUser.trim(), adminPass.trim());
+      if (res.success) {
+        setRegistros(res.registros);
+      }
+    } catch (e) {
+      console.warn('Error al refrescar registros:', e);
+    } finally {
+      setLoadingRegistros(false);
+    }
+  };
+
+  const handleLockRegistros = () => {
+    setIsDevUnlocked(false);
+    setAdminPass('');
+    setAuthError('');
+  };
 
   const handleDeleteRegistro = async (id: number) => {
     if (!window.confirm('¿Deseas eliminar este registro de acceso?')) return;
-    const ok = await apiService.deleteRegistro(id);
+    const ok = await apiService.deleteRegistro(id, adminUser.trim(), adminPass.trim());
     if (ok) {
       setRegistros(prev => prev.filter(r => r.id !== id));
     }
@@ -974,87 +1006,174 @@ export const Settings: React.FC<SettingsProps> = ({
           </div>
         )}
 
-        {/* Tabla de Personas Registradas que usan la App */}
-        <div className="pt-5 border-t border-slate-800 space-y-3">
+        {/* Zona Protegida: Registros de Personas que usan la App */}
+        <div className="pt-5 border-t border-slate-800 space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center space-x-2">
-              <Users className="w-4 h-4 text-teal-400" />
+              {isDevUnlocked ? (
+                <Unlock className="w-5 h-5 text-emerald-400" />
+              ) : (
+                <Lock className="w-5 h-5 text-amber-400" />
+              )}
               <h4 className="font-bold text-white text-sm">
-                Personas Registradas que usan la App ({registros.length})
+                Registros de Personas que Usan la App (Acceso Exclusivo Programador)
               </h4>
             </div>
-            <button
-              onClick={fetchRegistros}
-              disabled={loadingRegistros}
-              className="text-xs text-teal-400 hover:text-teal-300 flex items-center gap-1 font-semibold px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 hover:bg-slate-700 transition cursor-pointer"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${loadingRegistros ? 'animate-spin' : ''}`} />
-              <span>Actualizar Registros</span>
-            </button>
+
+            {isDevUnlocked && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleRefreshRegistros}
+                  disabled={loadingRegistros}
+                  className="text-xs text-teal-400 hover:text-teal-300 flex items-center gap-1 font-semibold px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 hover:bg-slate-700 transition cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loadingRegistros ? 'animate-spin' : ''}`} />
+                  <span>Actualizar</span>
+                </button>
+                <button
+                  onClick={handleLockRegistros}
+                  className="text-xs text-rose-400 hover:text-rose-300 flex items-center gap-1 font-semibold px-2.5 py-1 rounded-lg bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 transition cursor-pointer"
+                >
+                  <Lock className="w-3.5 h-3.5" />
+                  <span>Bloquear Acceso</span>
+                </button>
+              </div>
+            )}
           </div>
 
-          <p className="text-xs text-slate-400">
-            Aquí quedan guardados todos los usuarios que ingresan su Nombre y Celular en la pantalla de bienvenida.
-          </p>
+          {!isDevUnlocked ? (
+            /* Formulario de Login de Programador */
+            <div className="bg-slate-950 p-6 rounded-xl border border-slate-800 max-w-lg space-y-4">
+              <div className="flex items-start space-x-3">
+                <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+                  <KeyRound className="w-4 h-4 text-amber-400" />
+                </div>
+                <div>
+                  <h5 className="font-bold text-slate-200 text-xs uppercase tracking-wide">
+                    Autenticación Requerida
+                  </h5>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Estos datos son estrictamente confidenciales. Solo el programador/director puede ver los nombres y números de teléfono ingresados.
+                  </p>
+                </div>
+              </div>
 
-          {registros.length === 0 ? (
-            <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-800 text-center text-xs text-slate-500">
-              No hay personas registradas aún en la base de datos MySQL.
+              <form onSubmit={handleUnlockRegistros} className="space-y-3 pt-2">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">
+                    Usuario Programador
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Usuario"
+                    value={adminUser}
+                    onChange={(e) => setAdminUser(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs font-mono focus:border-teal-400 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-400 uppercase mb-1">
+                    Contraseña
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="Contraseña"
+                    value={adminPass}
+                    onChange={(e) => setAdminPass(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs font-mono focus:border-teal-400 focus:outline-none"
+                  />
+                </div>
+
+                {authError && (
+                  <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-semibold flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{authError}</span>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loadingRegistros}
+                  className="w-full py-2.5 bg-gradient-to-r from-teal-500 to-sky-500 hover:from-teal-400 hover:to-sky-400 text-slate-950 font-extrabold text-xs rounded-xl shadow-md transition cursor-pointer flex items-center justify-center space-x-2"
+                >
+                  <Unlock className="w-4 h-4" />
+                  <span>{loadingRegistros ? 'Verificando...' : 'Desbloquear y Ver Registros'}</span>
+                </button>
+              </form>
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-900/80 text-slate-400 uppercase text-[10px] font-bold border-b border-slate-800">
-                  <tr>
-                    <th className="py-2.5 px-3">Fecha y Hora</th>
-                    <th className="py-2.5 px-3">Nombre Completo</th>
-                    <th className="py-2.5 px-3">Celular</th>
-                    <th className="py-2.5 px-3">Rol / Usuario</th>
-                    <th className="py-2.5 px-3 text-right">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800 text-slate-300">
-                  {registros.map((reg) => {
-                    const cleanPhone = reg.celular.replace(/[^0-9]/g, '');
-                    return (
-                      <tr key={reg.id} className="hover:bg-slate-900/50 transition">
-                        <td className="py-2.5 px-3 font-mono text-[11px] text-slate-400 whitespace-nowrap">
-                          {reg.fecha_registro}
-                        </td>
-                        <td className="py-2.5 px-3 font-bold text-white whitespace-nowrap">
-                          {reg.nombre}
-                        </td>
-                        <td className="py-2.5 px-3 whitespace-nowrap">
-                          <a
-                            href={`https://wa.me/${cleanPhone}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 font-mono text-xs transition"
-                            title="Abrir chat en WhatsApp"
-                          >
-                            <MessageCircle className="w-3.5 h-3.5" />
-                            <span>{reg.celular}</span>
-                          </a>
-                        </td>
-                        <td className="py-2.5 px-3 whitespace-nowrap">
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-500/20 text-teal-300 border border-teal-500/30 uppercase">
-                            {reg.usuario || 'Usuario'}
-                          </span>
-                        </td>
-                        <td className="py-2.5 px-3 text-right whitespace-nowrap">
-                          <button
-                            onClick={() => handleDeleteRegistro(reg.id)}
-                            className="p-1 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded transition cursor-pointer"
-                            title="Eliminar registro"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </td>
+            /* Tabla Desbloqueada para el Programador */
+            <div className="space-y-3 animate-fade-in">
+              <div className="flex items-center justify-between text-xs text-slate-400">
+                <span>Sesión activa para el usuario: <strong className="text-teal-300 font-mono">{adminUser}</strong></span>
+                <span className="font-bold text-white bg-slate-800 px-2 py-0.5 rounded border border-slate-700">
+                  {registros.length} Registrados
+                </span>
+              </div>
+
+              {registros.length === 0 ? (
+                <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-800 text-center text-xs text-slate-500">
+                  No hay personas registradas aún en la base de datos MySQL.
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-900/80 text-slate-400 uppercase text-[10px] font-bold border-b border-slate-800">
+                      <tr>
+                        <th className="py-2.5 px-3">Fecha y Hora</th>
+                        <th className="py-2.5 px-3">Nombre Completo</th>
+                        <th className="py-2.5 px-3">Celular</th>
+                        <th className="py-2.5 px-3">Rol / Usuario</th>
+                        <th className="py-2.5 px-3 text-right">Acciones</th>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800 text-slate-300">
+                      {registros.map((reg) => {
+                        const cleanPhone = reg.celular.replace(/[^0-9]/g, '');
+                        return (
+                          <tr key={reg.id} className="hover:bg-slate-900/50 transition">
+                            <td className="py-2.5 px-3 font-mono text-[11px] text-slate-400 whitespace-nowrap">
+                              {reg.fecha_registro}
+                            </td>
+                            <td className="py-2.5 px-3 font-bold text-white whitespace-nowrap">
+                              {reg.nombre}
+                            </td>
+                            <td className="py-2.5 px-3 whitespace-nowrap">
+                              <a
+                                href={`https://wa.me/${cleanPhone}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 font-mono text-xs transition"
+                                title="Abrir chat en WhatsApp"
+                              >
+                                <MessageCircle className="w-3.5 h-3.5" />
+                                <span>{reg.celular}</span>
+                              </a>
+                            </td>
+                            <td className="py-2.5 px-3 whitespace-nowrap">
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-500/20 text-teal-300 border border-teal-500/30 uppercase">
+                                {reg.usuario || 'Usuario'}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 text-right whitespace-nowrap">
+                              <button
+                                onClick={() => handleDeleteRegistro(reg.id)}
+                                className="p-1 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded transition cursor-pointer"
+                                title="Eliminar registro"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
         </div>

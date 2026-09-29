@@ -218,30 +218,40 @@ export const apiService = {
   },
 
   /**
-   * Obtiene la lista de personas que se registraron al ingresar a la app
+   * Obtiene la lista de personas que se registraron al ingresar a la app (requiere credenciales de programador)
    */
-  async getRegistros(): Promise<AppAccessRecord[]> {
+  async getRegistros(user?: string, pass?: string): Promise<{ success: boolean; registros: AppAccessRecord[]; message?: string }> {
     try {
-      const res = await fetch(`${getApiBase()}/registro.php`);
-      if (!res.ok) return [];
-      const data = await res.json();
-      if (data.success && Array.isArray(data.registros)) {
-        return data.registros;
+      const headers: Record<string, string> = {};
+      if (user && pass) {
+        headers['X-Admin-User'] = user;
+        headers['X-Admin-Key'] = pass;
       }
-      return [];
-    } catch (err) {
+      const res = await fetch(`${getApiBase()}/registro.php`, { headers });
+      const data = await res.json();
+      if (res.ok && data.success && Array.isArray(data.registros)) {
+        return { success: true, registros: data.registros };
+      }
+      return { success: false, registros: [], message: data.message || 'Credenciales incorrectas' };
+    } catch (err: any) {
       console.warn('Error al consultar registros de acceso:', err);
-      return [];
+      return { success: false, registros: [], message: err.message };
     }
   },
 
   /**
-   * Elimina un registro de acceso de la base de datos
+   * Elimina un registro de acceso de la base de datos (requiere credenciales de programador)
    */
-  async deleteRegistro(id: number): Promise<boolean> {
+  async deleteRegistro(id: number, user?: string, pass?: string): Promise<boolean> {
     try {
+      const headers: Record<string, string> = {};
+      if (user && pass) {
+        headers['X-Admin-User'] = user;
+        headers['X-Admin-Key'] = pass;
+      }
       const res = await fetch(`${getApiBase()}/registro.php?id=${id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers
       });
       const data = await res.json();
       return !!data.success;
