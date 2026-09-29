@@ -282,8 +282,16 @@ export const Patients: React.FC<PatientsProps> = ({
       notes: xrayNotes.trim() || undefined
     };
 
-    if (!selectedPatient.xrays) selectedPatient.xrays = [];
-    selectedPatient.xrays.unshift(newXRay);
+    const updatedXrays = [newXRay, ...(selectedPatient.xrays || [])];
+    if (onUpdatePatient) {
+      onUpdatePatient({
+        ...selectedPatient,
+        xrays: updatedXrays
+      });
+    } else {
+      if (!selectedPatient.xrays) selectedPatient.xrays = [];
+      selectedPatient.xrays.unshift(newXRay);
+    }
 
     setShowXRayModal(false);
     setXRayTitle('');

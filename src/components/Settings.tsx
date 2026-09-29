@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Building2, UserPlus, Stethoscope, ShieldCheck, Phone, Mail, FileBadge, Check, Trash2, Edit2, Sparkles, Save, Download, Upload, Database, RefreshCw, AlertCircle, Palette, RotateCcw, Clock, Calendar } from 'lucide-react';
+import { Building2, UserPlus, Stethoscope, ShieldCheck, Phone, Mail, FileBadge, Check, Trash2, Edit2, Sparkles, Save, Download, Upload, Database, RefreshCw, AlertCircle, Palette, RotateCcw, Clock, Calendar, Server, CheckCircle2, CloudLightning } from 'lucide-react';
 import { Dentist, Patient, Appointment, Budget, ConditionType, ClinicScheduleConfig, DayOfWeek, DaySchedule } from '../types';
 import { CONDITION_METAS, DEFAULT_CLINIC_SCHEDULE } from '../data/mockData';
 
@@ -23,6 +23,10 @@ interface SettingsProps {
   onResetConditionColors: () => void;
   clinicSchedule: ClinicScheduleConfig;
   onUpdateClinicSchedule: (newSchedule: ClinicScheduleConfig) => void;
+  syncStatus?: 'idle' | 'syncing' | 'synced' | 'error';
+  onSyncAllToMySQL?: () => Promise<any>;
+  onFetchAllFromMySQL?: () => Promise<any>;
+  onCheckMySQL?: () => Promise<any>;
 }
 
 export const Settings: React.FC<SettingsProps> = ({
@@ -44,7 +48,11 @@ export const Settings: React.FC<SettingsProps> = ({
   onUpdateConditionColor,
   onResetConditionColors,
   clinicSchedule,
-  onUpdateClinicSchedule
+  onUpdateClinicSchedule,
+  syncStatus = 'synced',
+  onSyncAllToMySQL,
+  onFetchAllFromMySQL,
+  onCheckMySQL
 }) => {
   // Estado local para los campos del consultorio
   const [tempClinicName, setTempClinicName] = useState(clinicName);
@@ -90,6 +98,69 @@ export const Settings: React.FC<SettingsProps> = ({
 
   // Filtro de categoría en gestor de colores
   const [colorCategoryFilter, setColorCategoryFilter] = useState<string>('todas');
+
+  // Estado local para MySQL Ferozo
+  const [dbCheckResult, setDbCheckResult] = useState<any>(null);
+  const [dbLoading, setDbLoading] = useState(false);
+  const [dbStatusMsg, setDbStatusMsg] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  const handleTestConnection = async () => {
+    if (!onCheckMySQL) return;
+    setDbLoading(true);
+    setDbStatusMsg({ text: 'Verificando tablas y conexión MySQL en Ferozo...', type: 'info' });
+    try {
+      const res = await onCheckMySQL();
+      setDbCheckResult(res);
+      if (res && res.success) {
+        setDbStatusMsg({ text: '¡Conexión y tablas verificadas con éxito en MySQL a0170001_colsul!', type: 'success' });
+      } else {
+        setDbStatusMsg({ text: res?.message || 'Error al conectar con la base de datos', type: 'error' });
+      }
+    } catch (e: any) {
+      setDbStatusMsg({ text: e.message || 'Error de red con el servidor DonWeb', type: 'error' });
+    } finally {
+      setDbLoading(false);
+    }
+  };
+
+  const handleManualSyncAll = async () => {
+    if (!onSyncAllToMySQL) return;
+    setDbLoading(true);
+    setDbStatusMsg({ text: 'Sincronizando pacientes, turnos y estudios hacia MySQL Ferozo...', type: 'info' });
+    try {
+      const res = await onSyncAllToMySQL();
+      if (res && res.success) {
+        setDbStatusMsg({ 
+          text: `¡Sincronizado! Guardados en MySQL: ${res.saved?.pacientes ?? 0} pacientes, ${res.saved?.turnos ?? 0} turnos, ${res.saved?.presupuestos ?? 0} presupuestos.`, 
+          type: 'success' 
+        });
+      } else {
+        setDbStatusMsg({ text: res?.message || 'Fallo en la sincronización con MySQL', type: 'error' });
+      }
+    } catch (e: any) {
+      setDbStatusMsg({ text: e.message || 'Error al sincronizar con el servidor', type: 'error' });
+    } finally {
+      setDbLoading(false);
+    }
+  };
+
+  const handleManualFetchAll = async () => {
+    if (!onFetchAllFromMySQL) return;
+    setDbLoading(true);
+    setDbStatusMsg({ text: 'Descargando datos actualizados desde MySQL Ferozo...', type: 'info' });
+    try {
+      const res = await onFetchAllFromMySQL();
+      if (res) {
+        setDbStatusMsg({ text: '¡Datos descargados y actualizados exitosamente desde MySQL Ferozo!', type: 'success' });
+      } else {
+        setDbStatusMsg({ text: 'No se pudieron descargar los datos desde MySQL.', type: 'error' });
+      }
+    } catch (e: any) {
+      setDbStatusMsg({ text: e.message || 'Error al descargar datos del servidor', type: 'error' });
+    } finally {
+      setDbLoading(false);
+    }
+  };
 
   const handleSaveClinicSettings = (e: React.FormEvent) => {
     e.preventDefault();
@@ -754,7 +825,128 @@ export const Settings: React.FC<SettingsProps> = ({
         )}
       </div>
 
-      {/* SECCIÓN 5: LISTADO Y ESTADO DE ODONTÓLOGOS DEL STAFF */}
+      {/* SECCIÓN 5: BASE DE DATOS MYSQL EN FEROZO (DONWEB) */}
+      <div className="bg-slate-900 text-slate-100 rounded-2xl p-6 border border-teal-500/30 shadow-xl space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800 pb-4 gap-3">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-xl bg-teal-500/20 text-teal-300 flex items-center justify-center font-bold border border-teal-500/40">
+              <Server className="w-5 h-5 text-teal-400" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                5. Base de Datos MySQL en Ferozo (DonWeb)
+                <span className="text-[10px] font-extrabold uppercase bg-teal-500/20 text-teal-300 border border-teal-500/30 px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse"></span>
+                  Conexión Activa
+                </span>
+              </h3>
+              <p className="text-xs text-slate-400">
+                Base de datos oficial <code className="text-teal-300 font-mono">a0170001_colsul</code> en Ferozo · Policonsultorio Colsul
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-400">Estado:</span>
+            <span className={`px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 ${
+              syncStatus === 'syncing' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' :
+              syncStatus === 'error' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' :
+              'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+            }`}>
+              <span className={`w-2 h-2 rounded-full ${
+                syncStatus === 'syncing' ? 'bg-amber-400 animate-ping' :
+                syncStatus === 'error' ? 'bg-rose-400' : 'bg-emerald-400'
+              }`}></span>
+              {syncStatus === 'syncing' ? 'Sincronizando...' : syncStatus === 'error' ? 'Error' : 'MySQL Vinculado'}
+            </span>
+          </div>
+        </div>
+
+        {/* Resumen de Tablas y Datos */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+          <div className="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800">
+            <span className="text-slate-400 block text-[11px]">Pacientes</span>
+            <span className="text-xl font-extrabold text-teal-300">{patients.length}</span>
+            <span className="text-[10px] text-slate-500 block">En memoria local</span>
+          </div>
+          <div className="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800">
+            <span className="text-slate-400 block text-[11px]">Turnos Médicos</span>
+            <span className="text-xl font-extrabold text-sky-300">{appointments.length}</span>
+            <span className="text-[10px] text-slate-500 block">Agenda total</span>
+          </div>
+          <div className="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800">
+            <span className="text-slate-400 block text-[11px]">Presupuestos</span>
+            <span className="text-xl font-extrabold text-amber-300">{budgets.length}</span>
+            <span className="text-[10px] text-slate-500 block">Tratamientos</span>
+          </div>
+          <div className="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800">
+            <span className="text-slate-400 block text-[11px]">Especialidades</span>
+            <span className="text-xl font-extrabold text-purple-300">15</span>
+            <span className="text-[10px] text-slate-500 block">10 Consultorios</span>
+          </div>
+        </div>
+
+        {/* Botones de acción MySQL */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <button
+            onClick={handleManualSyncAll}
+            disabled={dbLoading}
+            className="py-3 px-4 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 disabled:opacity-50 text-slate-950 font-extrabold text-xs rounded-xl transition-all shadow-md shadow-teal-500/20 flex items-center justify-center space-x-2"
+          >
+            <CloudLightning className="w-4 h-4" />
+            <span>Sincronizar Todo a MySQL</span>
+          </button>
+
+          <button
+            onClick={handleManualFetchAll}
+            disabled={dbLoading}
+            className="py-3 px-4 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-sky-300 font-extrabold text-xs rounded-xl border border-slate-700 transition-all flex items-center justify-center space-x-2"
+          >
+            <RefreshCw className={`w-4 h-4 ${dbLoading ? 'animate-spin' : ''}`} />
+            <span>Descargar Todo desde MySQL</span>
+          </button>
+
+          <button
+            onClick={handleTestConnection}
+            disabled={dbLoading}
+            className="py-3 px-4 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-teal-300 font-extrabold text-xs rounded-xl border border-slate-700 transition-all flex items-center justify-center space-x-2"
+          >
+            <CheckCircle2 className="w-4 h-4" />
+            <span>Verificar Tablas en Ferozo</span>
+          </button>
+        </div>
+
+        {/* Mensaje de estado */}
+        {dbStatusMsg && (
+          <div className={`p-4 rounded-xl text-xs font-bold flex items-center gap-2 animate-fade-in border ${
+            dbStatusMsg.type === 'success' ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300' :
+            dbStatusMsg.type === 'error' ? 'bg-rose-500/20 border-rose-500/40 text-rose-300' :
+            'bg-sky-500/20 border-sky-500/40 text-sky-300'
+          }`}>
+            <span className="w-2 h-2 rounded-full bg-current shrink-0"></span>
+            <span>{dbStatusMsg.text}</span>
+          </div>
+        )}
+
+        {/* Detalle técnico de verificación de tablas */}
+        {dbCheckResult && dbCheckResult.tables && (
+          <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2 text-xs">
+            <span className="font-mono text-teal-400 block font-bold text-[11px]">
+              Estatus del Esquema SQL en DonWeb ({dbCheckResult.database}):
+            </span>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono text-[11px]">
+              {Object.entries(dbCheckResult.tables).map(([tbl, info]: [string, any]) => (
+                <div key={tbl} className="bg-slate-900 px-2.5 py-1.5 rounded border border-slate-800 flex items-center justify-between">
+                  <span className="text-slate-300">{tbl}</span>
+                  <span className="text-emerald-400 font-bold">✓ {info.records ?? 0} reg</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* SECCIÓN 6: LISTADO Y ESTADO DE ODONTÓLOGOS DEL STAFF */}
       <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
         <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
           <div className="flex items-center space-x-3">

@@ -8,13 +8,17 @@ interface NavbarProps {
   setActiveTab: (tab: ActiveTab) => void;
   todayAppointmentsCount: number;
   clinicName?: string;
+  syncStatus?: 'idle' | 'syncing' | 'synced' | 'error';
+  onSyncNow?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   activeTab,
   setActiveTab,
   todayAppointmentsCount,
-  clinicName = 'Colsul'
+  clinicName = 'Colsul',
+  syncStatus = 'synced',
+  onSyncNow
 }) => {
   const navItems: { id: ActiveTab; label: string; icon: React.ReactNode; badge?: number }[] = [
     { id: 'specialties', label: 'Módulos Médicos (15)', icon: <Stethoscope className="w-4 h-4" /> },
@@ -71,14 +75,44 @@ export const Navbar: React.FC<NavbarProps> = ({
             })}
           </nav>
 
-          {/* User profile badge */}
-          <div className="hidden md:flex items-center space-x-3 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
-            <div className="w-8 h-8 rounded-full bg-teal-600 text-white font-bold text-xs flex items-center justify-center shadow-xs">
-               OA
-            </div>
-            <div className="text-left text-xs">
-              <span className="block font-bold text-slate-800">Omar Horacio Adamo</span>
-              <span className="block text-[10px] text-teal-600 font-semibold">Director Policonsultorio</span>
+          {/* Actions & Profile */}
+          <div className="flex items-center space-x-2.5">
+            {/* MySQL Sync Pill Button */}
+            {onSyncNow && (
+              <button
+                onClick={onSyncNow}
+                disabled={syncStatus === 'syncing'}
+                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all ${
+                  syncStatus === 'syncing'
+                    ? 'bg-amber-50 border-amber-300 text-amber-800 animate-pulse'
+                    : syncStatus === 'error'
+                    ? 'bg-rose-50 border-rose-300 text-rose-800 hover:bg-rose-100'
+                    : 'bg-emerald-50 border-emerald-300 text-emerald-800 hover:bg-emerald-100 shadow-2xs'
+                }`}
+                title="Sincronizar cambios con MySQL Ferozo (DonWeb)"
+              >
+                <span className={`w-2 h-2 rounded-full ${
+                  syncStatus === 'syncing' ? 'bg-amber-500 animate-ping' :
+                  syncStatus === 'error' ? 'bg-rose-500' : 'bg-emerald-500'
+                }`} />
+                <span className="font-mono text-[11px]">
+                  {syncStatus === 'syncing' ? 'Sincronizando...' : 'MySQL Ferozo'}
+                </span>
+                <span className="text-[10px] bg-white/80 px-1 py-0.2 rounded text-slate-700 font-semibold">
+                  ↻
+                </span>
+              </button>
+            )}
+
+            {/* User profile badge */}
+            <div className="hidden lg:flex items-center space-x-3 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
+              <div className="w-8 h-8 rounded-full bg-teal-600 text-white font-bold text-xs flex items-center justify-center shadow-xs">
+                 OA
+              </div>
+              <div className="text-left text-xs">
+                <span className="block font-bold text-slate-800">Omar Horacio Adamo</span>
+                <span className="block text-[10px] text-teal-600 font-semibold">Director Policonsultorio</span>
+              </div>
             </div>
           </div>
 

@@ -17,6 +17,7 @@ import { INITIAL_PATIENTS, INITIAL_APPOINTMENTS, INITIAL_BUDGETS, CONDITION_META
 import { SPECIALTIES_LIST, DEFAULT_PATIENT_SPECIALTIES } from './data/specialtiesData';
 import { Patient, Appointment, Budget, ToothFinding, AppointmentStatus, Dentist, ConditionType, ClinicalEvolution, ClinicScheduleConfig } from './types';
 import { Calendar, Users, LogOut, Building2, Stethoscope, Sparkles } from 'lucide-react';
+import { apiService } from './services/apiService';
 
 type AppPhase = 'intro' | 'main_menu' | 'booking' | 'login' | 'registro' | 'app';
 
@@ -100,6 +101,46 @@ export const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('colsul_budgets', JSON.stringify(budgets));
   }, [budgets]);
+
+  // Estado de sincronización con MySQL en Ferozo
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'error'>('idle');
+
+  // Sincronización inicial y verificación de MySQL en Ferozo (DonWeb)
+  useEffect(() => {
+    let isMounted = true;
+    const initDatabase = async () => {
+      setSyncStatus('syncing');
+      try {
+        await apiService.setupDatabase();
+        const remote = await apiService.fetchAllFromMySQL();
+        if (remote && remote.patients && remote.patients.length > 0) {
+          if (isMounted) {
+            setPatients(remote.patients);
+            if (remote.appointments && remote.appointments.length > 0) {
+              setAppointments(remote.appointments);
+            }
+            if (remote.budgets && remote.budgets.length > 0) {
+              setBudgets(remote.budgets);
+            }
+            setSyncStatus('synced');
+          }
+        } else {
+          // Si MySQL recién se inicializa, volcamos los datos iniciales
+          await apiService.syncAllToMySQL(patients, appointments, budgets);
+          if (isMounted) setSyncStatus('synced');
+        }
+      } catch (e) {
+        console.warn('MySQL Ferozo offline o error de red:', e);
+        if (isMounted) setSyncStatus('error');
+      }
+    };
+
+    initDatabase();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Estado de Colores Personalizados para el Odontograma
   const [conditionColors, setConditionColors] = useState<Record<ConditionType, string>>(() => {
@@ -227,20 +268,69 @@ export const App: React.FC = () => {
     }));
   };
 
+  const handleSyncAllToMySQL = async () => {
+    setSyncStatus('syncing');
+    try {
+      const res = await apiService.syncAllToMySQL(patients, appointments, budgets);
+      if (res && res.success) {
+        setSyncStatus('synced');
+      } else {
+        setSyncStatus('error');
+      }
+      return res;
+    } catch (e) {
+      setSyncStatus('error');
+      return { success: false, message: 'Error de red' };
+    }
+  };
+
+  const handleFetchAllFromMySQL = async () => {
+    setSyncStatus('syncing');
+    try {
+      const data = await apiService.fetchAllFromMySQL();
+      if (data && data.patients) {
+        if (data.patients.length > 0) setPatients(data.patients);
+        if (data.appointments.length > 0) setAppointments(data.appointments);
+        if (data.budgets.length > 0) setBudgets(data.budgets);
+        setSyncStatus('synced');
+        return data;
+      }
+      setSyncStatus('error');
+      return null;
+    } catch (e) {
+      setSyncStatus('error');
+      return null;
+    }
+  };
+
+  const handleCheckMySQL = async () => {
+    return await apiService.setupDatabase();
+  };
+
   const handleAddAppointment = (newApp: Appointment) => {
     setAppointments([newApp, ...appointments]);
+    apiService.saveAppointment(newApp).catch(e => console.warn('Error al guardar turno en MySQL:', e));
   };
 
   const handleUpdateAppointmentStatus = (id: string, status: AppointmentStatus) => {
-    setAppointments(prev => prev.map(app => app.id === id ? { ...app, status } : app));
+    setAppointments(prev => prev.map(app => {
+      if (app.id === id) {
+        const u = { ...app, status };
+        apiService.saveAppointment(u).catch(e => console.warn('Error al actualizar turno en MySQL:', e));
+        return u;
+      }
+      return app;
+    }));
   };
 
   const handleAddPatient = (newPatient: Patient) => {
     setPatients([newPatient, ...patients]);
+    apiService.savePatient(newPatient).catch(e => console.warn('Error al guardar paciente en MySQL:', e));
   };
 
   const handleUpdatePatient = (updatedPatient: Patient) => {
     setPatients(prev => prev.map(p => p.id === updatedPatient.id ? updatedPatient : p));
+    apiService.savePatient(updatedPatient).catch(e => console.warn('Error al actualizar paciente en MySQL:', e));
   };
 
   const handleAddBudget = (newBudget: Budget) => {
@@ -343,6 +433,8 @@ export const App: React.FC = () => {
         setActiveTab={setActiveTab}
         todayAppointmentsCount={todayAppointments.length}
         clinicName={clinicName}
+        syncStatus={syncStatus}
+        onSyncNow={handleSyncAllToMySQL}
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6">
@@ -464,6 +556,10 @@ export const App: React.FC = () => {
             onResetConditionColors={handleResetConditionColors}
             clinicSchedule={clinicSchedule}
             onUpdateClinicSchedule={handleUpdateClinicSchedule}
+            syncStatus={syncStatus}
+            onSyncAllToMySQL={handleSyncAllToMySQL}
+            onFetchAllFromMySQL={handleFetchAllFromMySQL}
+            onCheckMySQL={handleCheckMySQL}
           />
         )}
 
