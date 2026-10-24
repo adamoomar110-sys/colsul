@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, Lock, User, Activity } from 'lucide-react';
 
-// Credenciales hardcodeadas (se pueden migrar a backend en el futuro)
+// Credenciales de acceso al sistema médico
 const VALID_CREDENTIALS = [
+  { username: 'admin', password: 'colsul2026', role: 'Administrador' },
   { username: 'admin', password: 'odonto2025', role: 'Administrador' },
-  { username: 'doctor', password: 'doctor123', role: 'Odontólogo' },
+  { username: 'medico', password: 'doctor123', role: 'Médico' },
+  { username: 'doctor', password: 'doctor123', role: 'Médico' },
 ];
 
 interface LoginProps {
@@ -262,8 +264,9 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
             fontSize: '11px', color: 'rgba(100,116,139,0.8)',
             lineHeight: '1.6',
           }}>
-            <strong style={{ color: 'rgba(148,163,184,0.7)' }}>Acceso demo:</strong><br />
-            👤 <code style={{ color: '#14b8a6' }}>admin</code> / 🔑 <code style={{ color: '#14b8a6' }}>odonto2025</code>
+            <strong style={{ color: 'rgba(148,163,184,0.7)' }}>Acceso institucional Colsul:</strong><br />
+            👤 <code style={{ color: '#14b8a6' }}>admin</code> / 🔑 <code style={{ color: '#14b8a6' }}>colsul2026</code> (o <code style={{ color: '#14b8a6' }}>odonto2025</code>)<br />
+            👨‍⚕️ <code style={{ color: '#14b8a6' }}>medico</code> / 🔑 <code style={{ color: '#14b8a6' }}>doctor123</code>
           </div>
         </form>
 

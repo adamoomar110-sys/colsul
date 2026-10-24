@@ -2,6 +2,25 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Calendar, Clock, User, Phone, CreditCard, ArrowLeft, CheckCircle2, QrCode, Copy, Sparkles, MessageCircle, ShieldCheck, AlertTriangle, CalendarPlus, XCircle, ChevronLeft, ChevronRight, Stethoscope } from 'lucide-react';
 import { Appointment, ClinicScheduleConfig, DayOfWeek, Patient, Dentist } from '../types';
 import { DEFAULT_CLINIC_SCHEDULE, getDayOfWeekKey, generateTimeSlotsFromSchedule } from '../data/mockData';
+import { SPECIALTIES_LIST } from '../data/specialtiesData';
+
+export const BOOKING_SPECIALTIES = [
+  { id: 'odontologia', name: 'Odontología Integral', icon: '🦷', room: 1, price: 30000, senia: 12000 },
+  { id: 'oftalmologia', name: 'Oftalmología & Refracción', icon: '👁️', room: 2, price: 35000, senia: 15000 },
+  { id: 'cardiologia', name: 'Cardiología & ECG', icon: '❤️', room: 3, price: 40000, senia: 18000 },
+  { id: 'pediatria', name: 'Pediatría & Control Infantil', icon: '👶', room: 4, price: 28000, senia: 10000 },
+  { id: 'traumatologia', name: 'Traumatología & Ortopedia', icon: '🦴', room: 5, price: 35000, senia: 15000 },
+  { id: 'dermatologia', name: 'Dermatología & Lunares', icon: '🔬', room: 6, price: 32000, senia: 12000 },
+  { id: 'ginecologia', name: 'Ginecología & Obstetricia', icon: '🌸', room: 7, price: 35000, senia: 15000 },
+  { id: 'clinica_medica', name: 'Clínica Médica / General', icon: '🩺', room: 8, price: 25000, senia: 10000 },
+  { id: 'nutricion', name: 'Nutrición & Dietética', icon: '🥗', room: 9, price: 26000, senia: 10000 },
+  { id: 'kinesiologia', name: 'Kinesiología & Fisioterapia', icon: '🏃', room: 10, price: 24000, senia: 9000 },
+  { id: 'otorrinolaringologia', name: 'Otorrinolaringología (ORL)', icon: '👂', room: 2, price: 35000, senia: 15000 },
+  { id: 'neumonologia', name: 'Neumonología & Espirometría', icon: '🫁', room: 3, price: 38000, senia: 16000 },
+  { id: 'neurologia', name: 'Neurología Clínica', icon: '🧠', room: 5, price: 42000, senia: 18000 },
+  { id: 'psicologia', name: 'Psicología & Salud Mental', icon: '💬', room: 8, price: 28000, senia: 10000 },
+  { id: 'urologia', name: 'Urología & Próstata', icon: '💧', room: 7, price: 38000, senia: 16000 },
+];
 
 interface PatientBookingProps {
   onBackToMenu: () => void;
@@ -27,7 +46,7 @@ export const PatientBooking: React.FC<PatientBookingProps> = ({
   const [step, setStep] = useState<'schedule' | 'details' | 'payment' | 'confirmed'>('schedule');
   
   // Selección de fecha y turno
-  const [selectedSpecialty, setSelectedSpecialty] = useState('Consulta General & Diagnóstico');
+  const [selectedSpecialty, setSelectedSpecialty] = useState(BOOKING_SPECIALTIES[0].name);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
   const activeSchedule = clinicSchedule || DEFAULT_CLINIC_SCHEDULE;
@@ -35,16 +54,22 @@ export const PatientBooking: React.FC<PatientBookingProps> = ({
   const currentDaySchedule = activeSchedule[currentDayKey];
   const isDayOpen = currentDaySchedule?.isOpen ?? true;
 
-  // Odontólogos activos disponibles
+  // Médicos y especialistas activos disponibles
   const activeDentists = useMemo(() => {
     if (dentists && dentists.length > 0) {
       const act = dentists.filter(d => d.active);
       if (act.length > 0) return act;
     }
-    return [
-      { id: 'den-1', name: 'Dra. Amalia Merlo', licenseNumber: 'MP 45890', specialty: 'Ortodoncia & Operatoria', phone: '+54 9 11 4589-1234', email: 'dra.merlo@odontomerlo.com', active: true },
-      { id: 'den-2', name: 'Dr. Fernando Ruiz', licenseNumber: 'MP 51203', specialty: 'Endodoncia & Cirugía', phone: '+54 9 11 6723-9988', email: 'dr.ruiz@odontomerlo.com', active: true }
-    ];
+    return SPECIALTIES_LIST.map((spec, i) => ({
+      id: `doc-${i + 1}`,
+      name: spec.defaultDoctor,
+      licenseNumber: `MP ${42000 + i * 314}`,
+      specialty: spec.name,
+      roomNumber: spec.defaultRoom,
+      phone: '+54 9 11 4589-1234',
+      email: `${spec.id}@colsul.com`,
+      active: true
+    }));
   }, [dentists]);
 
   const [selectedDentistName, setSelectedDentistName] = useState(activeDentists[0]?.name || 'Dra. Amalia Merlo');
@@ -151,26 +176,24 @@ export const PatientBooking: React.FC<PatientBookingProps> = ({
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [newAppointmentId, setNewAppointmentId] = useState('');
 
-  const specialties = [
-    { id: 'odontologia', name: 'Odontología Integral', icon: '🦷', room: 1, price: 30000, senia: 12000 },
-    { id: 'oftalmologia', name: 'Oftalmología & Refracción', icon: '👁️', room: 2, price: 35000, senia: 15000 },
-    { id: 'cardiologia', name: 'Cardiología & ECG', icon: '❤️', room: 3, price: 40000, senia: 18000 },
-    { id: 'pediatria', name: 'Pediatría & Control Infantil', icon: '👶', room: 4, price: 28000, senia: 10000 },
-    { id: 'traumatologia', name: 'Traumatología & Ortopedia', icon: '🦴', room: 5, price: 35000, senia: 15000 },
-    { id: 'dermatologia', name: 'Dermatología & Lunares', icon: '🔬', room: 6, price: 32000, senia: 12000 },
-    { id: 'ginecologia', name: 'Ginecología & Obstetricia', icon: '🌸', room: 7, price: 35000, senia: 15000 },
-    { id: 'clinica_medica', name: 'Clínica Médica / General', icon: '🩺', room: 8, price: 25000, senia: 10000 },
-    { id: 'nutricion', name: 'Nutrición & Dietética', icon: '🥗', room: 9, price: 26000, senia: 10000 },
-    { id: 'kinesiologia', name: 'Kinesiología & Fisioterapia', icon: '🏃', room: 10, price: 24000, senia: 9000 },
-    { id: 'otorrinolaringologia', name: 'Otorrinolaringología (ORL)', icon: '👂', room: 2, price: 35000, senia: 15000 },
-    { id: 'neumonologia', name: 'Neumonología & Espirometría', icon: '🫁', room: 3, price: 38000, senia: 16000 },
-    { id: 'neurologia', name: 'Neurología Clínica', icon: '🧠', room: 5, price: 42000, senia: 18000 },
-    { id: 'psicologia', name: 'Psicología & Salud Mental', icon: '💬', room: 8, price: 28000, senia: 10000 },
-    { id: 'urologia', name: 'Urología & Próstata', icon: '💧', room: 7, price: 38000, senia: 16000 },
-  ];
-
+  const specialties = BOOKING_SPECIALTIES;
   const currentSpecialtyObj = specialties.find(s => s.name === selectedSpecialty) || specialties[0];
   const amountToPay = paymentOption === 'senia' ? currentSpecialtyObj.senia : currentSpecialtyObj.price;
+
+  const handleSelectSpecialty = (specName: string) => {
+    setSelectedSpecialty(specName);
+    const spec = BOOKING_SPECIALTIES.find(s => s.name === specName);
+    if (spec) {
+      const matchDoc = activeDentists.find(d => 
+        d.specialty.toLowerCase().includes(spec.name.toLowerCase()) ||
+        spec.name.toLowerCase().includes(d.specialty.toLowerCase()) ||
+        (d.roomNumber && d.roomNumber === spec.room)
+      );
+      if (matchDoc) {
+        setSelectedDentistName(matchDoc.name);
+      }
+    }
+  };
 
   const handleCopyAlias = () => {
     navigator.clipboard.writeText('COLSUL.POLICONSULTORIO.MP');
@@ -308,21 +331,24 @@ export const PatientBooking: React.FC<PatientBookingProps> = ({
 
             {/* Especialidades */}
             <div className="mb-6">
-              <label className="block text-xs font-bold uppercase text-slate-300 tracking-wider mb-2">Especialidad u Odontología:</label>
+              <label className="block text-xs font-bold uppercase text-slate-300 tracking-wider mb-2">Especialidad Médica:</label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {specialties.map(spec => (
                   <div
                     key={spec.id}
-                    onClick={() => setSelectedSpecialty(spec.name)}
+                    onClick={() => handleSelectSpecialty(spec.name)}
                     className={`p-4 rounded-2xl border cursor-pointer transition-all ${
                       selectedSpecialty === spec.name
                         ? 'border-sky-500 bg-sky-500/15 text-white ring-2 ring-sky-500/30'
                         : 'border-slate-800 bg-slate-950/60 text-slate-300 hover:border-slate-700'
                     }`}
                   >
-                    <div className="font-bold text-sm">{spec.name}</div>
+                    <div className="font-bold text-sm flex items-center gap-2">
+                      <span>{spec.icon}</span>
+                      <span>{spec.name}</span>
+                    </div>
                     <div className="text-xs text-slate-400 mt-1 flex justify-between">
-                      <span>Valor: ${spec.price.toLocaleString('es-AR')}</span>
+                      <span>Consultorio #{spec.room} · ${spec.price.toLocaleString('es-AR')}</span>
                       <span className="text-sky-400 font-semibold">Seña: ${spec.senia.toLocaleString('es-AR')}</span>
                     </div>
                   </div>
@@ -330,11 +356,11 @@ export const PatientBooking: React.FC<PatientBookingProps> = ({
               </div>
             </div>
 
-            {/* Profesional Odontólogo/a Tratante */}
+            {/* Profesional Médico/a Tratante */}
             <div className="mb-6">
               <label className="block text-xs font-bold uppercase text-slate-300 tracking-wider mb-2 flex items-center gap-1.5">
                 <Stethoscope className="w-4 h-4 text-teal-400" />
-                <span>Profesional Odontólogo/a Tratante:</span>
+                <span>Profesional Médico/a Tratante:</span>
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {activeDentists.map(dentist => (
@@ -693,7 +719,7 @@ export const PatientBooking: React.FC<PatientBookingProps> = ({
               <div className="flex items-center justify-between p-3 bg-slate-900 rounded-xl border border-slate-800">
                 <div>
                   <div className="text-[10px] text-slate-400 font-bold uppercase">Alias Mercado Pago</div>
-                  <div className="text-sm font-extrabold text-sky-300 tracking-wider">ODONTO.MERLO.MP</div>
+                  <div className="text-sm font-extrabold text-sky-300 tracking-wider">COLSUL.POLICONSULTORIO.MP</div>
                 </div>
                 <button
                   type="button"
@@ -787,7 +813,7 @@ export const PatientBooking: React.FC<PatientBookingProps> = ({
 
             <div className="flex flex-col gap-3 max-w-md mx-auto">
               <a
-                href={`https://wa.me/5491178295317?text=Hola%20OdontoMerlo,%20acabo%20de%20reservar%20mi%20turno%20para%20el%20${selectedDate}%20a%20las%20${selectedTime}%20hs.%20Nombre:%20${encodeURIComponent(nombre)}`}
+                href={`https://wa.me/5491178295317?text=Hola%20Colsul%20Policonsultorio,%20acabo%20de%20reservar%20mi%20turno%20para%20el%20${selectedDate}%20a%20las%20${selectedTime}%20hs.%20Nombre:%20${encodeURIComponent(nombre)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20"
@@ -798,7 +824,7 @@ export const PatientBooking: React.FC<PatientBookingProps> = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <a
-                  href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=Turno+Odontologico+${encodeURIComponent(selectedSpecialty)}&dates=${selectedDate.replace(/-/g, '')}T${selectedTime.replace(':', '')}00/${selectedDate.replace(/-/g, '')}T${selectedTime.replace(':', '')}00&details=Turno+Odontologico+en+OdontoMerlo+con+la+Dra.+Amalia+Merlo`}
+                  href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=Turno+Colsul+${encodeURIComponent(selectedSpecialty)}&dates=${selectedDate.replace(/-/g, '')}T${selectedTime.replace(':', '')}00/${selectedDate.replace(/-/g, '')}T${selectedTime.replace(':', '')}00&details=Turno+en+Colsul+Policonsultorio+con+${encodeURIComponent(selectedDentistName)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="py-3 px-3 bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-md"
@@ -808,7 +834,7 @@ export const PatientBooking: React.FC<PatientBookingProps> = ({
                 </a>
 
                 <a
-                  href={`https://wa.me/5491178295317?text=Hola%20OdontoMerlo,%20te%20escribo%20por%20un%20imprevisto%20con%20mi%20turno%20del%20${selectedDate}%20a%20las%20${selectedTime}%20hs.%20Nombre:%20${encodeURIComponent(nombre)}`}
+                  href={`https://wa.me/5491178295317?text=Hola%20Colsul%20Policonsultorio,%20te%20escribo%20por%20un%20imprevisto%20con%20mi%20turno%20del%20${selectedDate}%20a%20las%20${selectedTime}%20hs.%20Nombre:%20${encodeURIComponent(nombre)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="py-3 px-3 bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 border border-slate-700"

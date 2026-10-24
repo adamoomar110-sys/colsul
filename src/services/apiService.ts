@@ -7,6 +7,9 @@ const getApiBase = (): string => {
   if (path.includes('/colsul')) {
     return '/colsul/api';
   }
+  if (path.includes('/consul')) {
+    return '/consul/api';
+  }
   return './api';
 };
 

@@ -22,8 +22,8 @@ export const Registro: React.FC<RegistroProps> = ({ usuarioLogin, onDone }) => {
     try {
       const apiEndpoint = window.location.pathname.includes('/colsul') 
         ? '/colsul/api/registro.php' 
-        : window.location.pathname.includes('/odonto')
-        ? '/odonto/api/registro.php'
+        : window.location.pathname.includes('/consul')
+        ? '/consul/api/registro.php'
         : './api/registro.php';
 
       const response = await fetch(apiEndpoint, {
