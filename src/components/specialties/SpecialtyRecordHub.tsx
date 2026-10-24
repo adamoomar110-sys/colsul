@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Patient, MedicalSpecialty, ToothFinding, ConditionType,
   OphthalmologyRecord, CardiologyRecord, PediatricsRecord,
@@ -23,6 +23,51 @@ interface SpecialtyRecordHubProps {
   initialSpecialty?: MedicalSpecialty;
 }
 
+export const SpecialtySaveButton: React.FC<{
+  label: string;
+  onSave: () => void;
+  isSaving?: boolean;
+  isSaved?: boolean;
+}> = ({ label, onSave, isSaving, isSaved }) => (
+  <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200">
+    {isSaved && (
+      <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-300 px-3.5 py-1.5 rounded-xl shadow-xs animate-fade-in">
+        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+        <span>¡Ficha guardada exitosamente en MySQL!</span>
+      </div>
+    )}
+    <button
+      type="button"
+      onClick={onSave}
+      disabled={isSaving}
+      className={`flex items-center gap-2 px-5 py-2.5 font-bold rounded-xl text-xs shadow-sm transition-all active:scale-95 ${
+        isSaved
+          ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-200'
+          : isSaving
+          ? 'bg-teal-400 text-white cursor-wait'
+          : 'bg-teal-600 hover:bg-teal-700 text-white'
+      }`}
+    >
+      {isSaved ? (
+        <>
+          <CheckCircle2 className="w-4 h-4" />
+          <span>¡Guardado con Éxito! ✓</span>
+        </>
+      ) : isSaving ? (
+        <>
+          <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          <span>Guardando en MySQL...</span>
+        </>
+      ) : (
+        <>
+          <Save className="w-4 h-4" />
+          <span>{label}</span>
+        </>
+      )}
+    </button>
+  </div>
+);
+
 export const SpecialtyRecordHub: React.FC<SpecialtyRecordHubProps> = ({
   patient,
   onUpdatePatient,
@@ -32,11 +77,19 @@ export const SpecialtyRecordHub: React.FC<SpecialtyRecordHubProps> = ({
 }) => {
   const [activeSpecialty, setActiveSpecialty] = useState<MedicalSpecialty>(initialSpecialty);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
+  const [savingSpec, setSavingSpec] = useState<MedicalSpecialty | null>(null);
+  const [savedSpec, setSavedSpec] = useState<MedicalSpecialty | null>(null);
 
   // Helper para actualizar datos de especialidad en el paciente
   const handleSaveSpecialtyData = (specId: MedicalSpecialty, data: any) => {
+    setSavingSpec(specId);
+
+    const existingSpecialties = (patient.specialtiesData && typeof patient.specialtiesData === 'object' && !Array.isArray(patient.specialtiesData))
+      ? { ...patient.specialtiesData }
+      : {};
+
     const updatedSpecialties = {
-      ...(patient.specialtiesData || {}),
+      ...existingSpecialties,
       [specId]: {
         ...data,
         lastUpdated: new Date().toISOString().split('T')[0]
@@ -49,8 +102,17 @@ export const SpecialtyRecordHub: React.FC<SpecialtyRecordHubProps> = ({
     };
 
     onUpdatePatient(updatedPatient);
-    setSaveSuccessMsg(`¡Ficha de ${SPECIALTIES_LIST.find(s => s.id === specId)?.name} guardada correctamente!`);
-    setTimeout(() => setSaveSuccessMsg(null), 3500);
+
+    setTimeout(() => {
+      setSavingSpec(null);
+      setSavedSpec(specId);
+      const specName = SPECIALTIES_LIST.find(s => s.id === specId)?.name || 'Especialidad';
+      setSaveSuccessMsg(`¡Ficha de ${specName} guardada correctamente en MySQL Ferozo!`);
+      setTimeout(() => {
+        setSavedSpec(null);
+        setSaveSuccessMsg(null);
+      }, 4000);
+    }, 400);
   };
 
   const currentSpecMeta = SPECIALTIES_LIST.find(s => s.id === activeSpecialty) || SPECIALTIES_LIST[0];
@@ -148,116 +210,166 @@ export const SpecialtyRecordHub: React.FC<SpecialtyRecordHubProps> = ({
         {/* 2. OFTALMOLOGÍA */}
         {activeSpecialty === 'oftalmologia' && (
           <OphthalmologyModule
+            key={`${patient.id}-oftalmologia`}
             patient={patient}
             onSave={(data) => handleSaveSpecialtyData('oftalmologia', data)}
+            isSaving={savingSpec === 'oftalmologia'}
+            isSaved={savedSpec === 'oftalmologia'}
           />
         )}
 
         {/* 3. CARDIOLOGÍA */}
         {activeSpecialty === 'cardiologia' && (
           <CardiologyModule
+            key={`${patient.id}-cardiologia`}
             patient={patient}
             onSave={(data) => handleSaveSpecialtyData('cardiologia', data)}
+            isSaving={savingSpec === 'cardiologia'}
+            isSaved={savedSpec === 'cardiologia'}
           />
         )}
 
         {/* 4. PEDIATRÍA */}
         {activeSpecialty === 'pediatria' && (
           <PediatricsModule
+            key={`${patient.id}-pediatria`}
             patient={patient}
             onSave={(data) => handleSaveSpecialtyData('pediatria', data)}
+            isSaving={savingSpec === 'pediatria'}
+            isSaved={savedSpec === 'pediatria'}
           />
         )}
 
         {/* 5. TRAUMATOLOGÍA */}
         {activeSpecialty === 'traumatologia' && (
           <TraumatologyModule
+            key={`${patient.id}-traumatologia`}
             patient={patient}
             onSave={(data) => handleSaveSpecialtyData('traumatologia', data)}
+            isSaving={savingSpec === 'traumatologia'}
+            isSaved={savedSpec === 'traumatologia'}
           />
         )}
 
         {/* 6. DERMATOLOGÍA */}
         {activeSpecialty === 'dermatologia' && (
           <DermatologyModule
+            key={`${patient.id}-dermatologia`}
             patient={patient}
             onSave={(data) => handleSaveSpecialtyData('dermatologia', data)}
+            isSaving={savingSpec === 'dermatologia'}
+            isSaved={savedSpec === 'dermatologia'}
           />
         )}
 
         {/* 7. GINECOLOGÍA & OBSTETRICIA */}
         {activeSpecialty === 'ginecologia' && (
           <GynecologyModule
+            key={`${patient.id}-ginecologia`}
             patient={patient}
             onSave={(data) => handleSaveSpecialtyData('ginecologia', data)}
+            isSaving={savingSpec === 'ginecologia'}
+            isSaved={savedSpec === 'ginecologia'}
           />
         )}
 
         {/* 8. CLÍNICA MÉDICA */}
         {activeSpecialty === 'clinica_medica' && (
           <InternalMedicineModule
+            key={`${patient.id}-clinica_medica`}
             patient={patient}
             onSave={(data) => handleSaveSpecialtyData('clinica_medica', data)}
+            isSaving={savingSpec === 'clinica_medica'}
+            isSaved={savedSpec === 'clinica_medica'}
           />
         )}
 
         {/* 9. NUTRICIÓN */}
         {activeSpecialty === 'nutricion' && (
           <NutritionModule
+            key={`${patient.id}-nutricion`}
             patient={patient}
             onSave={(data) => handleSaveSpecialtyData('nutricion', data)}
+            isSaving={savingSpec === 'nutricion'}
+            isSaved={savedSpec === 'nutricion'}
           />
         )}
 
         {/* 10. KINESIOLOGÍA */}
         {activeSpecialty === 'kinesiologia' && (
           <KinesiologyModule
+            key={`${patient.id}-kinesiologia`}
             patient={patient}
             onSave={(data) => handleSaveSpecialtyData('kinesiologia', data)}
+            isSaving={savingSpec === 'kinesiologia'}
+            isSaved={savedSpec === 'kinesiologia'}
           />
         )}
 
         {/* 11. OTORRINOLARINGOLOGÍA */}
         {activeSpecialty === 'otorrinolaringologia' && (
           <OtorhinolaryngologyModule
+            key={`${patient.id}-otorrinolaringologia`}
             patient={patient}
             onSave={(data) => handleSaveSpecialtyData('otorrinolaringologia', data)}
+            isSaving={savingSpec === 'otorrinolaringologia'}
+            isSaved={savedSpec === 'otorrinolaringologia'}
           />
         )}
 
         {/* 12. NEUMONOLOGÍA */}
         {activeSpecialty === 'neumonologia' && (
           <PneumologyModule
+            key={`${patient.id}-neumonologia`}
             patient={patient}
             onSave={(data) => handleSaveSpecialtyData('neumonologia', data)}
+            isSaving={savingSpec === 'neumonologia'}
+            isSaved={savedSpec === 'neumonologia'}
           />
         )}
 
         {/* 13. NEUROLOGÍA */}
         {activeSpecialty === 'neurologia' && (
           <NeurologyModule
+            key={`${patient.id}-neurologia`}
             patient={patient}
             onSave={(data) => handleSaveSpecialtyData('neurologia', data)}
+            isSaving={savingSpec === 'neurologia'}
+            isSaved={savedSpec === 'neurologia'}
           />
         )}
 
         {/* 14. PSICOLOGÍA */}
         {activeSpecialty === 'psicologia' && (
           <PsychologyModule
+            key={`${patient.id}-psicologia`}
             patient={patient}
             onSave={(data) => handleSaveSpecialtyData('psicologia', data)}
+            isSaving={savingSpec === 'psicologia'}
+            isSaved={savedSpec === 'psicologia'}
           />
         )}
 
         {/* 15. UROLOGÍA */}
         {activeSpecialty === 'urologia' && (
           <UrologyModule
+            key={`${patient.id}-urologia`}
             patient={patient}
             onSave={(data) => handleSaveSpecialtyData('urologia', data)}
+            isSaving={savingSpec === 'urologia'}
+            isSaved={savedSpec === 'urologia'}
           />
         )}
 
       </div>
+
+      {/* Toast Flotante Siempre Visible en Pantalla al Guardar */}
+      {saveSuccessMsg && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 bg-emerald-600 text-white rounded-2xl shadow-2xl text-sm font-black border-2 border-white animate-bounce">
+          <CheckCircle2 className="w-5 h-5 text-emerald-100 shrink-0" />
+          <span>{saveSuccessMsg}</span>
+        </div>
+      )}
     </div>
   );
 };
@@ -265,8 +377,17 @@ export const SpecialtyRecordHub: React.FC<SpecialtyRecordHubProps> = ({
 // =========================================================================
 // SUB-MÓDULO: OFTALMOLOGÍA (Cartilla Snellen + Refracción + PIO)
 // =========================================================================
-const OphthalmologyModule: React.FC<{ patient: Patient; onSave: (data: OphthalmologyRecord) => void }> = ({ patient, onSave }) => {
-  const initial = patient.specialtiesData?.oftalmologia || {
+const OphthalmologyModule: React.FC<{
+  patient: Patient;
+  onSave: (data: OphthalmologyRecord) => void;
+  isSaving?: boolean;
+  isSaved?: boolean;
+}> = ({ patient, onSave, isSaving, isSaved }) => {
+  const specObj = (patient.specialtiesData && typeof patient.specialtiesData === 'object' && !Array.isArray(patient.specialtiesData))
+    ? patient.specialtiesData
+    : {};
+
+  const initial = specObj.oftalmologia || {
     visualAcuityRight: '20/20',
     visualAcuityLeft: '20/25',
     sphereRight: 0,
@@ -283,6 +404,13 @@ const OphthalmologyModule: React.FC<{ patient: Patient; onSave: (data: Ophthalmo
   };
 
   const [form, setForm] = useState<OphthalmologyRecord>(initial);
+
+  useEffect(() => {
+    const s = (patient.specialtiesData && typeof patient.specialtiesData === 'object' && !Array.isArray(patient.specialtiesData))
+      ? patient.specialtiesData
+      : {};
+    if (s.oftalmologia) setForm(s.oftalmologia);
+  }, [patient.id]);
 
   const snellenLines = [
     { label: '20/200', letters: 'E', size: 'text-4xl' },
@@ -488,15 +616,12 @@ const OphthalmologyModule: React.FC<{ patient: Patient; onSave: (data: Ophthalmo
         </div>
       </div>
 
-      <div className="flex justify-end pt-3 border-t border-slate-200">
-        <button
-          onClick={() => onSave(form)}
-          className="flex items-center gap-2 px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl text-xs shadow-sm transition-all"
-        >
-          <Save className="w-4 h-4" />
-          <span>Guardar Ficha Oftalmológica</span>
-        </button>
-      </div>
+      <SpecialtySaveButton
+        label="Guardar Ficha Oftalmológica"
+        onSave={() => onSave(form)}
+        isSaving={isSaving}
+        isSaved={isSaved}
+      />
     </div>
   );
 };
@@ -504,8 +629,17 @@ const OphthalmologyModule: React.FC<{ patient: Patient; onSave: (data: Ophthalmo
 // =========================================================================
 // SUB-MÓDULO: CARDIOLOGÍA (PA + FC + Trazado ECG + Framingham)
 // =========================================================================
-const CardiologyModule: React.FC<{ patient: Patient; onSave: (data: CardiologyRecord) => void }> = ({ patient, onSave }) => {
-  const initial = patient.specialtiesData?.cardiologia || {
+const CardiologyModule: React.FC<{
+  patient: Patient;
+  onSave: (data: CardiologyRecord) => void;
+  isSaving?: boolean;
+  isSaved?: boolean;
+}> = ({ patient, onSave, isSaving, isSaved }) => {
+  const specObj = (patient.specialtiesData && typeof patient.specialtiesData === 'object' && !Array.isArray(patient.specialtiesData))
+    ? patient.specialtiesData
+    : {};
+
+  const initial = specObj.cardiologia || {
     systolicBP: 120,
     diastolicBP: 80,
     heartRate: 72,
@@ -517,6 +651,13 @@ const CardiologyModule: React.FC<{ patient: Patient; onSave: (data: CardiologyRe
   };
 
   const [form, setForm] = useState<CardiologyRecord>(initial);
+
+  useEffect(() => {
+    const s = (patient.specialtiesData && typeof patient.specialtiesData === 'object' && !Array.isArray(patient.specialtiesData))
+      ? patient.specialtiesData
+      : {};
+    if (s.cardiologia) setForm(s.cardiologia);
+  }, [patient.id]);
 
   // Clasificación automática de PA
   const getBPClassification = (sys: number, dia: number) => {
@@ -694,15 +835,12 @@ const CardiologyModule: React.FC<{ patient: Patient; onSave: (data: CardiologyRe
         />
       </div>
 
-      <div className="flex justify-end pt-3 border-t border-slate-200">
-        <button
-          onClick={() => onSave(form)}
-          className="flex items-center gap-2 px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl text-xs shadow-sm transition-all"
-        >
-          <Save className="w-4 h-4" />
-          <span>Guardar Ficha Cardiológica</span>
-        </button>
-      </div>
+      <SpecialtySaveButton
+        label="Guardar Ficha Cardiológica"
+        onSave={() => onSave(form)}
+        isSaving={isSaving}
+        isSaved={isSaved}
+      />
     </div>
   );
 };
@@ -710,7 +848,12 @@ const CardiologyModule: React.FC<{ patient: Patient; onSave: (data: CardiologyRe
 // =========================================================================
 // SUB-MÓDULO: PEDIATRÍA (Percentiles OMS + Calendario Vacunación)
 // =========================================================================
-const PediatricsModule: React.FC<{ patient: Patient; onSave: (data: PediatricsRecord) => void }> = ({ patient, onSave }) => {
+const PediatricsModule: React.FC<{
+  patient: Patient;
+  onSave: (data: PediatricsRecord) => void;
+  isSaving?: boolean;
+  isSaved?: boolean;
+}> = ({ patient, onSave, isSaving, isSaved }) => {
   const defaultVaccines = [
     { id: 'v-1', vaccineName: 'BCG (Tuberculosis)', ageTarget: 'Recién nacido', applied: true, applicationDate: '2020-01-10' },
     { id: 'v-2', vaccineName: 'Hepatitis B Pediátrica', ageTarget: 'Recién nacido', applied: true, applicationDate: '2020-01-10' },
@@ -724,7 +867,11 @@ const PediatricsModule: React.FC<{ patient: Patient; onSave: (data: PediatricsRe
     { id: 'v-10', vaccineName: 'VPH Virus Papiloma Humano (11 años)', ageTarget: '11 años', applied: false },
   ];
 
-  const initial = patient.specialtiesData?.pediatria || {
+  const specObj = (patient.specialtiesData && typeof patient.specialtiesData === 'object' && !Array.isArray(patient.specialtiesData))
+    ? patient.specialtiesData
+    : {};
+
+  const initial = specObj.pediatria || {
     weightKg: 16.5,
     heightCm: 104,
     headCircumferenceCm: 51,
@@ -738,6 +885,13 @@ const PediatricsModule: React.FC<{ patient: Patient; onSave: (data: PediatricsRe
   };
 
   const [form, setForm] = useState<PediatricsRecord>(initial);
+
+  useEffect(() => {
+    const s = (patient.specialtiesData && typeof patient.specialtiesData === 'object' && !Array.isArray(patient.specialtiesData))
+      ? patient.specialtiesData
+      : {};
+    if (s.pediatria) setForm(s.pediatria);
+  }, [patient.id]);
 
   const toggleVaccine = (vaccineId: string) => {
     setForm(prev => ({
@@ -879,15 +1033,12 @@ const PediatricsModule: React.FC<{ patient: Patient; onSave: (data: PediatricsRe
 
       </div>
 
-      <div className="flex justify-end pt-3 border-t border-slate-200">
-        <button
-          onClick={() => onSave(form)}
-          className="flex items-center gap-2 px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl text-xs shadow-sm transition-all"
-        >
-          <Save className="w-4 h-4" />
-          <span>Guardar Ficha Pediátrica</span>
-        </button>
-      </div>
+      <SpecialtySaveButton
+        label="Guardar Ficha Pediátrica"
+        onSave={() => onSave(form)}
+        isSaving={isSaving}
+        isSaved={isSaved}
+      />
     </div>
   );
 };
@@ -895,8 +1046,17 @@ const PediatricsModule: React.FC<{ patient: Patient; onSave: (data: PediatricsRe
 // =========================================================================
 // SUB-MÓDULO: TRAUMATOLOGÍA (Mapa Articular + Escala EVA + Inmovilización)
 // =========================================================================
-const TraumatologyModule: React.FC<{ patient: Patient; onSave: (data: TraumatologyRecord) => void }> = ({ patient, onSave }) => {
-  const initial = patient.specialtiesData?.traumatologia || {
+const TraumatologyModule: React.FC<{
+  patient: Patient;
+  onSave: (data: TraumatologyRecord) => void;
+  isSaving?: boolean;
+  isSaved?: boolean;
+}> = ({ patient, onSave, isSaving, isSaved }) => {
+  const specObj = (patient.specialtiesData && typeof patient.specialtiesData === 'object' && !Array.isArray(patient.specialtiesData))
+    ? patient.specialtiesData
+    : {};
+
+  const initial = specObj.traumatologia || {
     affectedJoint: 'rodilla',
     side: 'derecho',
     painScaleEVA: 5,
@@ -908,6 +1068,13 @@ const TraumatologyModule: React.FC<{ patient: Patient; onSave: (data: Traumatolo
   };
 
   const [form, setForm] = useState<TraumatologyRecord>(initial);
+
+  useEffect(() => {
+    const s = (patient.specialtiesData && typeof patient.specialtiesData === 'object' && !Array.isArray(patient.specialtiesData))
+      ? patient.specialtiesData
+      : {};
+    if (s.traumatologia) setForm(s.traumatologia);
+  }, [patient.id]);
 
   const joints: { id: TraumatologyRecord['affectedJoint']; label: string; icon: string }[] = [
     { id: 'hombro', label: 'Hombro / Clavícula', icon: '💪' },
@@ -1043,15 +1210,12 @@ const TraumatologyModule: React.FC<{ patient: Patient; onSave: (data: Traumatolo
 
       </div>
 
-      <div className="flex justify-end pt-3 border-t border-slate-200">
-        <button
-          onClick={() => onSave(form)}
-          className="flex items-center gap-2 px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl text-xs shadow-sm transition-all"
-        >
-          <Save className="w-4 h-4" />
-          <span>Guardar Ficha Traumatológica</span>
-        </button>
-      </div>
+      <SpecialtySaveButton
+        label="Guardar Ficha Traumatológica"
+        onSave={() => onSave(form)}
+        isSaving={isSaving}
+        isSaved={isSaved}
+      />
     </div>
   );
 };
@@ -1059,8 +1223,17 @@ const TraumatologyModule: React.FC<{ patient: Patient; onSave: (data: Traumatolo
 // =========================================================================
 // SUB-MÓDULO: DERMATOLOGÍA (Fototipo Fitzpatrick + Regla ABCDE)
 // =========================================================================
-const DermatologyModule: React.FC<{ patient: Patient; onSave: (data: DermatologyRecord) => void }> = ({ patient, onSave }) => {
-  const initial = patient.specialtiesData?.dermatologia || {
+const DermatologyModule: React.FC<{
+  patient: Patient;
+  onSave: (data: DermatologyRecord) => void;
+  isSaving?: boolean;
+  isSaved?: boolean;
+}> = ({ patient, onSave, isSaving, isSaved }) => {
+  const specObj = (patient.specialtiesData && typeof patient.specialtiesData === 'object' && !Array.isArray(patient.specialtiesData))
+    ? patient.specialtiesData
+    : {};
+
+  const initial = specObj.dermatologia || {
     fitzpatrickPhototype: 'III',
     lesionLocation: 'Espalda región escapular',
     lesionType: 'nevus',
@@ -1075,6 +1248,13 @@ const DermatologyModule: React.FC<{ patient: Patient; onSave: (data: Dermatology
   };
 
   const [form, setForm] = useState<DermatologyRecord>(initial);
+
+  useEffect(() => {
+    const s = (patient.specialtiesData && typeof patient.specialtiesData === 'object' && !Array.isArray(patient.specialtiesData))
+      ? patient.specialtiesData
+      : {};
+    if (s.dermatologia) setForm(s.dermatologia);
+  }, [patient.id]);
 
   const fitzpatrickTypes = [
     { type: 'I', desc: 'Piel muy clara, siempre se quema, nunca se broncea', color: '#fef08a' },
@@ -1227,15 +1407,12 @@ const DermatologyModule: React.FC<{ patient: Patient; onSave: (data: Dermatology
 
       </div>
 
-      <div className="flex justify-end pt-3 border-t border-slate-200">
-        <button
-          onClick={() => onSave(form)}
-          className="flex items-center gap-2 px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl text-xs shadow-sm transition-all"
-        >
-          <Save className="w-4 h-4" />
-          <span>Guardar Ficha Dermatológica</span>
-        </button>
-      </div>
+      <SpecialtySaveButton
+        label="Guardar Ficha Dermatológica"
+        onSave={() => onSave(form)}
+        isSaving={isSaving}
+        isSaved={isSaved}
+      />
     </div>
   );
 };
@@ -1243,8 +1420,17 @@ const DermatologyModule: React.FC<{ patient: Patient; onSave: (data: Dermatology
 // =========================================================================
 // SUB-MÓDULO: GINECOLOGÍA & OBSTETRICIA (FUM + FPP Gestacional + PAP)
 // =========================================================================
-const GynecologyModule: React.FC<{ patient: Patient; onSave: (data: GynecologyRecord) => void }> = ({ patient, onSave }) => {
-  const initial = patient.specialtiesData?.ginecologia || {
+const GynecologyModule: React.FC<{
+  patient: Patient;
+  onSave: (data: GynecologyRecord) => void;
+  isSaving?: boolean;
+  isSaved?: boolean;
+}> = ({ patient, onSave, isSaving, isSaved }) => {
+  const specObj = (patient.specialtiesData && typeof patient.specialtiesData === 'object' && !Array.isArray(patient.specialtiesData))
+    ? patient.specialtiesData
+    : {};
+
+  const initial = specObj.ginecologia || {
     fumDate: '2026-05-15',
     gestationalWeeks: 15,
     gestationalDays: 3,
@@ -1261,6 +1447,13 @@ const GynecologyModule: React.FC<{ patient: Patient; onSave: (data: GynecologyRe
   };
 
   const [form, setForm] = useState<GynecologyRecord>(initial);
+
+  useEffect(() => {
+    const s = (patient.specialtiesData && typeof patient.specialtiesData === 'object' && !Array.isArray(patient.specialtiesData))
+      ? patient.specialtiesData
+      : {};
+    if (s.ginecologia) setForm(s.ginecologia);
+  }, [patient.id]);
 
   // Calculadora de FPP (Regla de Naegele: FUM + 7 días + 9 meses)
   const calculatePregnancy = (fumStr: string) => {
@@ -1414,15 +1607,12 @@ const GynecologyModule: React.FC<{ patient: Patient; onSave: (data: GynecologyRe
 
       </div>
 
-      <div className="flex justify-end pt-3 border-t border-slate-200">
-        <button
-          onClick={() => onSave(form)}
-          className="flex items-center gap-2 px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl text-xs shadow-sm transition-all"
-        >
-          <Save className="w-4 h-4" />
-          <span>Guardar Ficha Ginecológica</span>
-        </button>
-      </div>
+      <SpecialtySaveButton
+        label="Guardar Ficha Ginecológica"
+        onSave={() => onSave(form)}
+        isSaving={isSaving}
+        isSaved={isSaved}
+      />
     </div>
   );
 };
@@ -1430,8 +1620,17 @@ const GynecologyModule: React.FC<{ patient: Patient; onSave: (data: GynecologyRe
 // =========================================================================
 // SUB-MÓDULO: CLÍNICA MÉDICA (Signos Vitales + Examen Sistémico)
 // =========================================================================
-const InternalMedicineModule: React.FC<{ patient: Patient; onSave: (data: InternalMedicineRecord) => void }> = ({ patient, onSave }) => {
-  const initial = patient.specialtiesData?.clinica_medica || {
+const InternalMedicineModule: React.FC<{
+  patient: Patient;
+  onSave: (data: InternalMedicineRecord) => void;
+  isSaving?: boolean;
+  isSaved?: boolean;
+}> = ({ patient, onSave, isSaving, isSaved }) => {
+  const specObj = (patient.specialtiesData && typeof patient.specialtiesData === 'object' && !Array.isArray(patient.specialtiesData))
+    ? patient.specialtiesData
+    : {};
+
+  const initial = specObj.clinica_medica || {
     systolicBP: 120,
     diastolicBP: 80,
     heartRate: 72,
@@ -1452,6 +1651,13 @@ const InternalMedicineModule: React.FC<{ patient: Patient; onSave: (data: Intern
   };
 
   const [form, setForm] = useState<InternalMedicineRecord>(initial);
+
+  useEffect(() => {
+    const s = (patient.specialtiesData && typeof patient.specialtiesData === 'object' && !Array.isArray(patient.specialtiesData))
+      ? patient.specialtiesData
+      : {};
+    if (s.clinica_medica) setForm(s.clinica_medica);
+  }, [patient.id]);
 
   return (
     <div className="space-y-6">
@@ -1570,15 +1776,12 @@ const InternalMedicineModule: React.FC<{ patient: Patient; onSave: (data: Intern
         />
       </div>
 
-      <div className="flex justify-end pt-3 border-t border-slate-200">
-        <button
-          onClick={() => onSave(form)}
-          className="flex items-center gap-2 px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl text-xs shadow-sm transition-all"
-        >
-          <Save className="w-4 h-4" />
-          <span>Guardar Ficha Clínica Médica</span>
-        </button>
-      </div>
+      <SpecialtySaveButton
+        label="Guardar Ficha Clínica Médica"
+        onSave={() => onSave(form)}
+        isSaving={isSaving}
+        isSaved={isSaved}
+      />
     </div>
   );
 };
@@ -1586,8 +1789,17 @@ const InternalMedicineModule: React.FC<{ patient: Patient; onSave: (data: Intern
 // =========================================================================
 // SUB-MÓDULO: NUTRICIÓN (IMC Automático + TMB Calorías + Plan)
 // =========================================================================
-const NutritionModule: React.FC<{ patient: Patient; onSave: (data: NutritionRecord) => void }> = ({ patient, onSave }) => {
-  const initial = patient.specialtiesData?.nutricion || {
+const NutritionModule: React.FC<{
+  patient: Patient;
+  onSave: (data: NutritionRecord) => void;
+  isSaving?: boolean;
+  isSaved?: boolean;
+}> = ({ patient, onSave, isSaving, isSaved }) => {
+  const specObj = (patient.specialtiesData && typeof patient.specialtiesData === 'object' && !Array.isArray(patient.specialtiesData))
+    ? patient.specialtiesData
+    : {};
+
+  const initial = specObj.nutricion || {
     weightKg: 75,
     heightCm: 172,
     bmi: 25.3,
@@ -1604,6 +1816,15 @@ const NutritionModule: React.FC<{ patient: Patient; onSave: (data: NutritionReco
   };
 
   const [form, setForm] = useState<NutritionRecord>(initial);
+
+  useEffect(() => {
+    const sObj = (patient.specialtiesData && typeof patient.specialtiesData === 'object' && !Array.isArray(patient.specialtiesData))
+      ? patient.specialtiesData
+      : {};
+    if (sObj.nutricion) {
+      setForm(sObj.nutricion);
+    }
+  }, [patient.id]);
 
   // Cálculo reactivo de IMC
   const updateAnthropometry = (weight: number, heightCm: number) => {
@@ -1744,15 +1965,12 @@ const NutritionModule: React.FC<{ patient: Patient; onSave: (data: NutritionReco
 
       </div>
 
-      <div className="flex justify-end pt-3 border-t border-slate-200">
-        <button
-          onClick={() => onSave(form)}
-          className="flex items-center gap-2 px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl text-xs shadow-sm transition-all"
-        >
-          <Save className="w-4 h-4" />
-          <span>Guardar Ficha Nutricional</span>
-        </button>
-      </div>
+      <SpecialtySaveButton
+        label="Guardar Ficha Nutricional"
+        onSave={() => onSave(form)}
+        isSaving={isSaving}
+        isSaved={isSaved}
+      />
     </div>
   );
 };
@@ -1760,8 +1978,17 @@ const NutritionModule: React.FC<{ patient: Patient; onSave: (data: NutritionReco
 // =========================================================================
 // SUB-MÓDULO: KINESIOLOGÍA (Sesiones de Rehabilitación + Agentes Físicos)
 // =========================================================================
-const KinesiologyModule: React.FC<{ patient: Patient; onSave: (data: KinesiologyRecord) => void }> = ({ patient, onSave }) => {
-  const initial = patient.specialtiesData?.kinesiologia || {
+const KinesiologyModule: React.FC<{
+  patient: Patient;
+  onSave: (data: KinesiologyRecord) => void;
+  isSaving?: boolean;
+  isSaved?: boolean;
+}> = ({ patient, onSave, isSaving, isSaved }) => {
+  const specObj = (patient.specialtiesData && typeof patient.specialtiesData === 'object' && !Array.isArray(patient.specialtiesData))
+    ? patient.specialtiesData
+    : {};
+
+  const initial = specObj.kinesiologia || {
     affectedZone: 'Hombro derecho - Manguito rotador',
     painScaleEVA: 4,
     treatmentGoals: 'Disminuir dolor, recuperar abducción y rotación externa.',
@@ -1780,6 +2007,13 @@ const KinesiologyModule: React.FC<{ patient: Patient; onSave: (data: Kinesiology
   };
 
   const [form, setForm] = useState<KinesiologyRecord>(initial);
+
+  useEffect(() => {
+    const s = (patient.specialtiesData && typeof patient.specialtiesData === 'object' && !Array.isArray(patient.specialtiesData))
+      ? patient.specialtiesData
+      : {};
+    if (s.kinesiologia) setForm(s.kinesiologia);
+  }, [patient.id]);
 
   return (
     <div className="space-y-6">
@@ -1890,15 +2124,12 @@ const KinesiologyModule: React.FC<{ patient: Patient; onSave: (data: Kinesiology
 
       </div>
 
-      <div className="flex justify-end pt-3 border-t border-slate-200">
-        <button
-          onClick={() => onSave(form)}
-          className="flex items-center gap-2 px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl text-xs shadow-sm transition-all"
-        >
-          <Save className="w-4 h-4" />
-          <span>Guardar Ficha Kinefisiátrica</span>
-        </button>
-      </div>
+      <SpecialtySaveButton
+        label="Guardar Ficha Kinefisiátrica"
+        onSave={() => onSave(form)}
+        isSaving={isSaving}
+        isSaved={isSaved}
+      />
     </div>
   );
 };
@@ -1906,7 +2137,12 @@ const KinesiologyModule: React.FC<{ patient: Patient; onSave: (data: Kinesiology
 // =========================================================================
 // SUB-MÓDULO: OTORRINOLARINGOLOGÍA (Audiograma Tonal + Otoscopía)
 // =========================================================================
-const OtorhinolaryngologyModule: React.FC<{ patient: Patient; onSave: (data: OtorhinolaryngologyRecord) => void }> = ({ patient, onSave }) => {
+const OtorhinolaryngologyModule: React.FC<{
+  patient: Patient;
+  onSave: (data: OtorhinolaryngologyRecord) => void;
+  isSaving?: boolean;
+  isSaved?: boolean;
+}> = ({ patient, onSave, isSaving, isSaved }) => {
   const defaultAudiometry = [
     { frequencyHz: 250 as const, rightEarDb: 15, leftEarDb: 15 },
     { frequencyHz: 500 as const, rightEarDb: 20, leftEarDb: 20 },
@@ -1916,7 +2152,11 @@ const OtorhinolaryngologyModule: React.FC<{ patient: Patient; onSave: (data: Oto
     { frequencyHz: 8000 as const, rightEarDb: 25, leftEarDb: 35 },
   ];
 
-  const initial = patient.specialtiesData?.otorrinolaringologia || {
+  const specObj = (patient.specialtiesData && typeof patient.specialtiesData === 'object' && !Array.isArray(patient.specialtiesData))
+    ? patient.specialtiesData
+    : {};
+
+  const initial = specObj.otorrinolaringologia || {
     audiometry: defaultAudiometry,
     rightOtoscopy: 'Conducto auditivo permeable, membrana timpánica íntegra, reflejo luminoso presente.',
     leftOtoscopy: 'Membrana timpánica congestiva en cuadrante posterosuperior.',
@@ -1927,6 +2167,13 @@ const OtorhinolaryngologyModule: React.FC<{ patient: Patient; onSave: (data: Oto
   };
 
   const [form, setForm] = useState<OtorhinolaryngologyRecord>(initial);
+
+  useEffect(() => {
+    const s = (patient.specialtiesData && typeof patient.specialtiesData === 'object' && !Array.isArray(patient.specialtiesData))
+      ? patient.specialtiesData
+      : {};
+    if (s.otorrinolaringologia) setForm(s.otorrinolaringologia);
+  }, [patient.id]);
 
   return (
     <div className="space-y-6">
@@ -2033,15 +2280,12 @@ const OtorhinolaryngologyModule: React.FC<{ patient: Patient; onSave: (data: Oto
 
       </div>
 
-      <div className="flex justify-end pt-3 border-t border-slate-200">
-        <button
-          onClick={() => onSave(form)}
-          className="flex items-center gap-2 px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl text-xs shadow-sm transition-all"
-        >
-          <Save className="w-4 h-4" />
-          <span>Guardar Ficha ORL</span>
-        </button>
-      </div>
+      <SpecialtySaveButton
+        label="Guardar Ficha ORL"
+        onSave={() => onSave(form)}
+        isSaving={isSaving}
+        isSaved={isSaved}
+      />
     </div>
   );
 };
@@ -2049,8 +2293,17 @@ const OtorhinolaryngologyModule: React.FC<{ patient: Patient; onSave: (data: Oto
 // =========================================================================
 // SUB-MÓDULO: NEUMONOLOGÍA (Espirometría + SatO2 + Tabaquismo)
 // =========================================================================
-const PneumologyModule: React.FC<{ patient: Patient; onSave: (data: PneumologyRecord) => void }> = ({ patient, onSave }) => {
-  const initial = patient.specialtiesData?.neumonologia || {
+const PneumologyModule: React.FC<{
+  patient: Patient;
+  onSave: (data: PneumologyRecord) => void;
+  isSaving?: boolean;
+  isSaved?: boolean;
+}> = ({ patient, onSave, isSaving, isSaved }) => {
+  const specObj = (patient.specialtiesData && typeof patient.specialtiesData === 'object' && !Array.isArray(patient.specialtiesData))
+    ? patient.specialtiesData
+    : {};
+
+  const initial = specObj.neumonologia || {
     fvcLiters: 4.2,
     fvcPercentPredicted: 95,
     fev1Liters: 3.5,
@@ -2065,6 +2318,13 @@ const PneumologyModule: React.FC<{ patient: Patient; onSave: (data: PneumologyRe
   };
 
   const [form, setForm] = useState<PneumologyRecord>(initial);
+
+  useEffect(() => {
+    const s = (patient.specialtiesData && typeof patient.specialtiesData === 'object' && !Array.isArray(patient.specialtiesData))
+      ? patient.specialtiesData
+      : {};
+    if (s.neumonologia) setForm(s.neumonologia);
+  }, [patient.id]);
 
   const calculateSpirometry = (fvc: number, fev1: number) => {
     const ratio = fvc > 0 ? parseFloat(((fev1 / fvc) * 100).toFixed(1)) : 0;
@@ -2182,15 +2442,12 @@ const PneumologyModule: React.FC<{ patient: Patient; onSave: (data: PneumologyRe
 
       </div>
 
-      <div className="flex justify-end pt-3 border-t border-slate-200">
-        <button
-          onClick={() => onSave(form)}
-          className="flex items-center gap-2 px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl text-xs shadow-sm transition-all"
-        >
-          <Save className="w-4 h-4" />
-          <span>Guardar Ficha Neumonológica</span>
-        </button>
-      </div>
+      <SpecialtySaveButton
+        label="Guardar Ficha Neumonológica"
+        onSave={() => onSave(form)}
+        isSaving={isSaving}
+        isSaved={isSaved}
+      />
     </div>
   );
 };
@@ -2198,8 +2455,17 @@ const PneumologyModule: React.FC<{ patient: Patient; onSave: (data: PneumologyRe
 // =========================================================================
 // SUB-MÓDULO: NEUROLOGÍA (Escala de Glasgow 3-15 + Pares Craneales)
 // =========================================================================
-const NeurologyModule: React.FC<{ patient: Patient; onSave: (data: NeurologyRecord) => void }> = ({ patient, onSave }) => {
-  const initial = patient.specialtiesData?.neurologia || {
+const NeurologyModule: React.FC<{
+  patient: Patient;
+  onSave: (data: NeurologyRecord) => void;
+  isSaving?: boolean;
+  isSaved?: boolean;
+}> = ({ patient, onSave, isSaving, isSaved }) => {
+  const specObj = (patient.specialtiesData && typeof patient.specialtiesData === 'object' && !Array.isArray(patient.specialtiesData))
+    ? patient.specialtiesData
+    : {};
+
+  const initial = specObj.neurologia || {
     glasgowEyeOpening: 4,
     glasgowVerbal: 5,
     glasgowMotor: 6,
@@ -2214,6 +2480,13 @@ const NeurologyModule: React.FC<{ patient: Patient; onSave: (data: NeurologyReco
   };
 
   const [form, setForm] = useState<NeurologyRecord>(initial);
+
+  useEffect(() => {
+    const s = (patient.specialtiesData && typeof patient.specialtiesData === 'object' && !Array.isArray(patient.specialtiesData))
+      ? patient.specialtiesData
+      : {};
+    if (s.neurologia) setForm(s.neurologia);
+  }, [patient.id]);
 
   const updateGlasgow = (eye: number, verbal: number, motor: number) => {
     const total = eye + verbal + motor;
@@ -2339,15 +2612,12 @@ const NeurologyModule: React.FC<{ patient: Patient; onSave: (data: NeurologyReco
 
       </div>
 
-      <div className="flex justify-end pt-3 border-t border-slate-200">
-        <button
-          onClick={() => onSave(form)}
-          className="flex items-center gap-2 px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl text-xs shadow-sm transition-all"
-        >
-          <Save className="w-4 h-4" />
-          <span>Guardar Ficha Neurológica</span>
-        </button>
-      </div>
+      <SpecialtySaveButton
+        label="Guardar Ficha Neurológica"
+        onSave={() => onSave(form)}
+        isSaving={isSaving}
+        isSaved={isSaved}
+      />
     </div>
   );
 };
@@ -2355,8 +2625,17 @@ const NeurologyModule: React.FC<{ patient: Patient; onSave: (data: NeurologyReco
 // =========================================================================
 // SUB-MÓDULO: PSICOLOGÍA (Notas Confidenciales + GAD-7 / PHQ-9 + Metas)
 // =========================================================================
-const PsychologyModule: React.FC<{ patient: Patient; onSave: (data: PsychologyRecord) => void }> = ({ patient, onSave }) => {
-  const initial = patient.specialtiesData?.psicologia || {
+const PsychologyModule: React.FC<{
+  patient: Patient;
+  onSave: (data: PsychologyRecord) => void;
+  isSaving?: boolean;
+  isSaved?: boolean;
+}> = ({ patient, onSave, isSaving, isSaved }) => {
+  const specObj = (patient.specialtiesData && typeof patient.specialtiesData === 'object' && !Array.isArray(patient.specialtiesData))
+    ? patient.specialtiesData
+    : {};
+
+  const initial = specObj.psicologia || {
     consultationReason: 'Dificultades en gestión emocional, estrés laboral y somatizaciones.',
     therapeuticApproach: 'cognitivo_conductual',
     currentEmotionalState: 'Lúcido, colaborador, afecto congruente con el relato.',
@@ -2368,6 +2647,13 @@ const PsychologyModule: React.FC<{ patient: Patient; onSave: (data: PsychologyRe
   };
 
   const [form, setForm] = useState<PsychologyRecord>(initial);
+
+  useEffect(() => {
+    const s = (patient.specialtiesData && typeof patient.specialtiesData === 'object' && !Array.isArray(patient.specialtiesData))
+      ? patient.specialtiesData
+      : {};
+    if (s.psicologia) setForm(s.psicologia);
+  }, [patient.id]);
 
   return (
     <div className="space-y-6">
@@ -2430,15 +2716,12 @@ const PsychologyModule: React.FC<{ patient: Patient; onSave: (data: PsychologyRe
         </div>
       </div>
 
-      <div className="flex justify-end pt-3 border-t border-slate-200">
-        <button
-          onClick={() => onSave(form)}
-          className="flex items-center gap-2 px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl text-xs shadow-sm transition-all"
-        >
-          <Save className="w-4 h-4" />
-          <span>Guardar Ficha Psicológica</span>
-        </button>
-      </div>
+      <SpecialtySaveButton
+        label="Guardar Ficha Psicológica"
+        onSave={() => onSave(form)}
+        isSaving={isSaving}
+        isSaved={isSaved}
+      />
     </div>
   );
 };
@@ -2446,8 +2729,17 @@ const PsychologyModule: React.FC<{ patient: Patient; onSave: (data: PsychologyRe
 // =========================================================================
 // SUB-MÓDULO: UROLOGÍA (Score IPSS 0-35 + PSA + Ecografía)
 // =========================================================================
-const UrologyModule: React.FC<{ patient: Patient; onSave: (data: UrologyRecord) => void }> = ({ patient, onSave }) => {
-  const initial = patient.specialtiesData?.urologia || {
+const UrologyModule: React.FC<{
+  patient: Patient;
+  onSave: (data: UrologyRecord) => void;
+  isSaving?: boolean;
+  isSaved?: boolean;
+}> = ({ patient, onSave, isSaving, isSaved }) => {
+  const specObj = (patient.specialtiesData && typeof patient.specialtiesData === 'object' && !Array.isArray(patient.specialtiesData))
+    ? patient.specialtiesData
+    : {};
+
+  const initial = specObj.urologia || {
     ipssScore: 6,
     ipssSeverity: 'leve_0_7',
     totalPsaNgMl: 1.2,
@@ -2460,6 +2752,13 @@ const UrologyModule: React.FC<{ patient: Patient; onSave: (data: UrologyRecord) 
   };
 
   const [form, setForm] = useState<UrologyRecord>(initial);
+
+  useEffect(() => {
+    const s = (patient.specialtiesData && typeof patient.specialtiesData === 'object' && !Array.isArray(patient.specialtiesData))
+      ? patient.specialtiesData
+      : {};
+    if (s.urologia) setForm(s.urologia);
+  }, [patient.id]);
 
   const calculatePsaRatio = (total: number, free: number) => {
     const ratio = total > 0 ? parseFloat(((free / total) * 100).toFixed(1)) : 0;
@@ -2576,15 +2875,12 @@ const UrologyModule: React.FC<{ patient: Patient; onSave: (data: UrologyRecord) 
 
       </div>
 
-      <div className="flex justify-end pt-3 border-t border-slate-200">
-        <button
-          onClick={() => onSave(form)}
-          className="flex items-center gap-2 px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl text-xs shadow-sm transition-all"
-        >
-          <Save className="w-4 h-4" />
-          <span>Guardar Ficha Urológica</span>
-        </button>
-      </div>
+      <SpecialtySaveButton
+        label="Guardar Ficha Urológica"
+        onSave={() => onSave(form)}
+        isSaving={isSaving}
+        isSaved={isSaved}
+      />
     </div>
   );
 };

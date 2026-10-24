@@ -45,6 +45,14 @@ if ($method === 'GET') {
     $patients = [];
     foreach ($rawPatients as $row) {
         $pid = $row['id'];
+        $specData = new stdClass();
+        if (!empty($row['specialties_data'])) {
+            $decoded = json_decode($row['specialties_data'], false);
+            if (is_object($decoded) && count(get_object_vars($decoded)) > 0) {
+                $specData = $decoded;
+            }
+        }
+
         $patients[] = [
             'id' => $row['id'],
             'name' => $row['name'],
@@ -59,7 +67,7 @@ if ($method === 'GET') {
             'allergies' => $row['allergies'] ?: '',
             'healthDeclaration' => $row['health_declaration'] ? json_decode($row['health_declaration'], true) : null,
             'odontogramFindings' => $row['odontogram_findings'] ? json_decode($row['odontogram_findings'], true) : [],
-            'specialtiesData' => $row['specialties_data'] ? json_decode($row['specialties_data'], true) : new stdClass(),
+            'specialtiesData' => $specData,
             'xrays' => isset($estudiosByPatient[$pid]) ? $estudiosByPatient[$pid] : [],
             'evolutions' => isset($evolucionesByPatient[$pid]) ? $evolucionesByPatient[$pid] : [],
             'notes' => $row['notes'] ?: ''
@@ -106,17 +114,36 @@ if ($method === 'GET') {
         ];
     }
 
+    // 4. OBTENER PROFESIONALES / MÉDICOS
+    $stmtD = $pdo->query("SELECT * FROM `profesionales` ORDER BY `room_number` ASC, `name` ASC");
+    $rawDentists = $stmtD->fetchAll();
+    $dentists = [];
+    foreach ($rawDentists as $d) {
+        $dentists[] = [
+            'id' => $d['id'],
+            'name' => $d['name'],
+            'licenseNumber' => $d['license_number'] ?: '',
+            'specialty' => $d['specialty'],
+            'roomNumber' => (int)$d['room_number'],
+            'phone' => $d['phone'] ?: '',
+            'email' => $d['email'] ?: '',
+            'active' => (bool)$d['active']
+        ];
+    }
+
     echo json_encode([
         "success" => true,
         "database" => "a0170001_colsul",
         "counts" => [
             "pacientes" => count($patients),
             "turnos" => count($appointments),
-            "presupuestos" => count($budgets)
+            "presupuestos" => count($budgets),
+            "profesionales" => count($dentists)
         ],
         "patients" => $patients,
         "appointments" => $appointments,
-        "budgets" => $budgets
+        "budgets" => $budgets,
+        "dentists" => $dentists
     ], JSON_UNESCAPED_UNICODE);
     exit();
 }
@@ -319,13 +346,50 @@ if ($method === 'POST') {
         }
     }
 
+    // 4. Guardar profesionales / médicos
+    $dentistsSaved = 0;
+    if (!empty($data['dentists']) && is_array($data['dentists'])) {
+        $sqlD = "INSERT INTO `profesionales` (
+            `id`, `name`, `license_number`, `specialty`, `room_number`, `phone`, `email`, `active`
+        ) VALUES (
+            :id, :name, :lic, :spec, :room, :phone, :email, :active
+        ) ON DUPLICATE KEY UPDATE
+            `name` = VALUES(`name`),
+            `license_number` = VALUES(`license_number`),
+            `specialty` = VALUES(`specialty`),
+            `room_number` = VALUES(`room_number`),
+            `phone` = VALUES(`phone`),
+            `email` = VALUES(`email`),
+            `active` = VALUES(`active`)";
+
+        $stmtD = $pdo->prepare($sqlD);
+
+        foreach ($data['dentists'] as $doc) {
+            if (empty($doc['name'])) continue;
+            $did = !empty($doc['id']) ? $doc['id'] : ('doc-' . round(microtime(true) * 1000) . '-' . rand(100, 999));
+
+            $stmtD->execute([
+                'id' => $did,
+                'name' => trim($doc['name']),
+                'lic' => isset($doc['licenseNumber']) ? trim($doc['licenseNumber']) : '',
+                'spec' => !empty($doc['specialty']) ? trim($doc['specialty']) : 'Medicina General',
+                'room' => isset($doc['roomNumber']) ? (int)$doc['roomNumber'] : 1,
+                'phone' => isset($doc['phone']) ? trim($doc['phone']) : '',
+                'email' => isset($doc['email']) ? trim($doc['email']) : '',
+                'active' => isset($doc['active']) ? ($doc['active'] ? 1 : 0) : 1
+            ]);
+            $dentistsSaved++;
+        }
+    }
+
     echo json_encode([
         "success" => true,
         "message" => "Sincronización completa con MySQL finalizada con éxito.",
         "saved" => [
             "pacientes" => $patientsSaved,
             "turnos" => $appointmentsSaved,
-            "presupuestos" => $budgetsSaved
+            "presupuestos" => $budgetsSaved,
+            "profesionales" => $dentistsSaved
         ]
     ], JSON_UNESCAPED_UNICODE);
     exit();

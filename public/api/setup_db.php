@@ -132,6 +132,39 @@ foreach ($tables as $name => $sql) {
     }
 }
 
+// Auto-seed de profesionales si la tabla está vacía
+try {
+    $profCount = $pdo->query("SELECT COUNT(*) FROM `profesionales`")->fetchColumn();
+    if ((int)$profCount === 0) {
+        $initialDoctors = [
+            ['id' => 'doc-1', 'name' => 'Dra. Amalia Merlo', 'license_number' => 'MN 42000', 'specialty' => 'Odontología Integral', 'room_number' => 1, 'phone' => '+54 9 11 4589-1234', 'email' => 'odontologia@colsul.com'],
+            ['id' => 'doc-2', 'name' => 'Dr. Lucas Varela', 'license_number' => 'MN 42314', 'specialty' => 'Oftalmología', 'room_number' => 2, 'phone' => '+54 9 11 4589-1234', 'email' => 'oftalmologia@colsul.com'],
+            ['id' => 'doc-3', 'name' => 'Dra. Mariana Benítez', 'license_number' => 'MN 42628', 'specialty' => 'Cardiología', 'room_number' => 3, 'phone' => '+54 9 11 4589-1234', 'email' => 'cardiologia@colsul.com'],
+            ['id' => 'doc-4', 'name' => 'Dr. Diego Morales', 'license_number' => 'MN 42942', 'specialty' => 'Pediatría', 'room_number' => 4, 'phone' => '+54 9 11 4589-1234', 'email' => 'pediatria@colsul.com'],
+            ['id' => 'doc-5', 'name' => 'Dr. Esteban Carrizo', 'license_number' => 'MN 43256', 'specialty' => 'Traumatología & Ortopedia', 'room_number' => 5, 'phone' => '+54 9 11 4589-1234', 'email' => 'traumatologia@colsul.com'],
+            ['id' => 'doc-6', 'name' => 'Dra. Sofía Roldán', 'license_number' => 'MN 43570', 'specialty' => 'Dermatología', 'room_number' => 6, 'phone' => '+54 9 11 4589-1234', 'email' => 'dermatologia@colsul.com'],
+            ['id' => 'doc-7', 'name' => 'Dra. Patricia Gómez', 'license_number' => 'MN 43884', 'specialty' => 'Ginecología & Obstetricia', 'room_number' => 7, 'phone' => '+54 9 11 4589-1234', 'email' => 'ginecologia@colsul.com'],
+            ['id' => 'doc-8', 'name' => 'Dr. Guillermo Navarro', 'license_number' => 'MN 44198', 'specialty' => 'Clínica Médica / Medicina Interna', 'room_number' => 8, 'phone' => '+54 9 11 4589-1234', 'email' => 'clinica_medica@colsul.com'],
+            ['id' => 'doc-9', 'name' => 'Lic. Camila Méndez', 'license_number' => 'MN 44512', 'specialty' => 'Nutrición & Dietética', 'room_number' => 9, 'phone' => '+54 9 11 4589-1234', 'email' => 'nutricion@colsul.com'],
+            ['id' => 'doc-10', 'name' => 'Lic. Lautaro Silva', 'license_number' => 'MN 44826', 'specialty' => 'Kinesiología & Fisioterapia', 'room_number' => 10, 'phone' => '+54 9 11 4589-1234', 'email' => 'kinesiologia@colsul.com'],
+            ['id' => 'doc-11', 'name' => 'Dr. Marcelo Font', 'license_number' => 'MN 45140', 'specialty' => 'Otorrinolaringología (ORL)', 'room_number' => 2, 'phone' => '+54 9 11 4589-1234', 'email' => 'otorrinolaringologia@colsul.com'],
+            ['id' => 'doc-12', 'name' => 'Dr. Andrés Casares', 'license_number' => 'MN 45454', 'specialty' => 'Neumonología', 'room_number' => 3, 'phone' => '+54 9 11 4589-1234', 'email' => 'neumonologia@colsul.com'],
+            ['id' => 'doc-13', 'name' => 'Dra. Gabriela Suárez', 'license_number' => 'MN 45768', 'specialty' => 'Neurología', 'room_number' => 5, 'phone' => '+54 9 11 4589-1234', 'email' => 'neurologia@colsul.com'],
+            ['id' => 'doc-14', 'name' => 'Lic. Martina Paz', 'license_number' => 'MN 46082', 'specialty' => 'Psicología & Salud Mental', 'room_number' => 8, 'phone' => '+54 9 11 4589-1234', 'email' => 'psicologia@colsul.com'],
+            ['id' => 'doc-15', 'name' => 'Dr. Roberto Blanco', 'license_number' => 'MN 46396', 'specialty' => 'Urología', 'room_number' => 7, 'phone' => '+54 9 11 4589-1234', 'email' => 'urologia@colsul.com']
+        ];
+
+        $ins = $pdo->prepare("INSERT INTO `profesionales` (`id`, `name`, `license_number`, `specialty`, `room_number`, `phone`, `email`, `active`) VALUES (?, ?, ?, ?, ?, ?, ?, 1)");
+        foreach ($initialDoctors as $d) {
+            $ins->execute([$d['id'], $d['name'], $d['license_number'], $d['specialty'], $d['room_number'], $d['phone'], $d['email']]);
+        }
+        $results['profesionales']['records'] = count($initialDoctors);
+        $results['profesionales']['seeded'] = true;
+    }
+} catch (PDOException $e) {
+    // Silently continue if error
+}
+
 echo json_encode([
     "success" => true,
     "message" => "Tablas verificadas correctamente en la base de datos a0170001_colsul en Ferozo.",

@@ -1,4 +1,4 @@
-import { Patient, Appointment, Budget } from '../types';
+import { Patient, Appointment, Budget, Dentist } from '../types';
 
 // Determinación inteligente de la ruta base del API
 const getApiBase = (): string => {
@@ -171,9 +171,61 @@ export const apiService = {
   },
 
   /**
-   * Sincronización completa masiva hacia MySQL Ferozo
+   * Obtiene todos los profesionales médicos desde MySQL
    */
-  async syncAllToMySQL(patients: Patient[], appointments: Appointment[], budgets: Budget[]): Promise<SyncResult> {
+  async getDentists(): Promise<Dentist[] | null> {
+    try {
+      const res = await fetch(`${getApiBase()}/profesionales.php`);
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (data.success && Array.isArray(data.dentists)) {
+        return data.dentists;
+      }
+      return null;
+    } catch (err) {
+      console.warn('Error al consultar profesionales médicos desde MySQL:', err);
+      return null;
+    }
+  },
+
+  /**
+   * Guarda o actualiza un profesional médico en MySQL
+   */
+  async saveDentist(dentist: Dentist): Promise<boolean> {
+    try {
+      const res = await fetch(`${getApiBase()}/profesionales.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dentist)
+      });
+      const data = await res.json();
+      return !!data.success;
+    } catch (err) {
+      console.warn('No se pudo guardar el profesional en MySQL:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Elimina un profesional médico de MySQL
+   */
+  async deleteDentist(dentistId: string): Promise<boolean> {
+    try {
+      const res = await fetch(`${getApiBase()}/profesionales.php?id=${encodeURIComponent(dentistId)}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      return !!data.success;
+    } catch (err) {
+      console.warn('No se pudo eliminar el profesional de MySQL:', err);
+      return false;
+    }
+  },
+
+  /**
+   * Sincronización completa masiva hacia MySQL Ferozo (pacientes, turnos, presupuestos y médicos)
+   */
+  async syncAllToMySQL(patients: Patient[], appointments: Appointment[], budgets: Budget[], dentists?: Dentist[]): Promise<SyncResult> {
     try {
       const res = await fetch(`${getApiBase()}/sync.php`, {
         method: 'POST',
@@ -181,7 +233,8 @@ export const apiService = {
         body: JSON.stringify({
           patients,
           appointments,
-          budgets
+          budgets,
+          dentists: dentists || []
         })
       });
       return await res.json();
@@ -201,6 +254,7 @@ export const apiService = {
     patients: Patient[];
     appointments: Appointment[];
     budgets: Budget[];
+    dentists: Dentist[];
   } | null> {
     try {
       const res = await fetch(`${getApiBase()}/sync.php`);
@@ -210,7 +264,8 @@ export const apiService = {
         return {
           patients: data.patients || [],
           appointments: data.appointments || [],
-          budgets: data.budgets || []
+          budgets: data.budgets || [],
+          dentists: data.dentists || []
         };
       }
       return null;

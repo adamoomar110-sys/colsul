@@ -122,11 +122,17 @@ export const App: React.FC = () => {
             if (remote.budgets && remote.budgets.length > 0) {
               setBudgets(remote.budgets);
             }
+            if (remote.dentists && remote.dentists.length > 0) {
+              setDentists(remote.dentists);
+            } else {
+              // Si MySQL no tiene profesionales guardados todavía, sincronizarlos
+              dentists.forEach(d => apiService.saveDentist(d).catch(() => {}));
+            }
             setSyncStatus('synced');
           }
         } else {
           // Si MySQL recién se inicializa, volcamos los datos iniciales
-          await apiService.syncAllToMySQL(patients, appointments, budgets);
+          await apiService.syncAllToMySQL(patients, appointments, budgets, dentists);
           if (isMounted) setSyncStatus('synced');
         }
       } catch (e) {
@@ -271,7 +277,7 @@ export const App: React.FC = () => {
   const handleSyncAllToMySQL = async () => {
     setSyncStatus('syncing');
     try {
-      const res = await apiService.syncAllToMySQL(patients, appointments, budgets);
+      const res = await apiService.syncAllToMySQL(patients, appointments, budgets, dentists);
       if (res && res.success) {
         setSyncStatus('synced');
       } else {
@@ -292,6 +298,7 @@ export const App: React.FC = () => {
         if (data.patients.length > 0) setPatients(data.patients);
         if (data.appointments.length > 0) setAppointments(data.appointments);
         if (data.budgets.length > 0) setBudgets(data.budgets);
+        if (data.dentists && data.dentists.length > 0) setDentists(data.dentists);
         setSyncStatus('synced');
         return data;
       }
@@ -349,14 +356,23 @@ export const App: React.FC = () => {
   // Handlers Médicos / Especialistas
   const handleAddDentist = (newDentist: Dentist) => {
     setDentists(prev => [newDentist, ...prev]);
+    apiService.saveDentist(newDentist).catch(e => console.warn('Error al guardar médico en MySQL:', e));
   };
 
   const handleToggleDentistStatus = (id: string) => {
-    setDentists(prev => prev.map(d => d.id === id ? { ...d, active: !d.active } : d));
+    setDentists(prev => prev.map(d => {
+      if (d.id === id) {
+        const u = { ...d, active: !d.active };
+        apiService.saveDentist(u).catch(e => console.warn('Error al actualizar médico en MySQL:', e));
+        return u;
+      }
+      return d;
+    }));
   };
 
   const handleDeleteDentist = (id: string) => {
     setDentists(prev => prev.filter(d => d.id !== id));
+    apiService.deleteDentist(id).catch(e => console.warn('Error al eliminar médico de MySQL:', e));
   };
 
   // Handler para Restaurar Backup Completo

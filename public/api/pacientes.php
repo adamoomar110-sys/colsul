@@ -245,6 +245,14 @@ function handleDelete($pdo) {
 }
 
 function formatPatientRow($row, $estudios = [], $evoluciones = []) {
+    $specData = new stdClass();
+    if (!empty($row['specialties_data'])) {
+        $decoded = json_decode($row['specialties_data'], false);
+        if (is_object($decoded) && count(get_object_vars($decoded)) > 0) {
+            $specData = $decoded;
+        }
+    }
+
     return [
         'id' => $row['id'],
         'name' => $row['name'],
@@ -259,7 +267,7 @@ function formatPatientRow($row, $estudios = [], $evoluciones = []) {
         'allergies' => $row['allergies'] ?: '',
         'healthDeclaration' => $row['health_declaration'] ? json_decode($row['health_declaration'], true) : null,
         'odontogramFindings' => $row['odontogram_findings'] ? json_decode($row['odontogram_findings'], true) : [],
-        'specialtiesData' => $row['specialties_data'] ? json_decode($row['specialties_data'], true) : new stdClass(),
+        'specialtiesData' => $specData,
         'xrays' => $estudios,
         'evolutions' => $evoluciones,
         'notes' => $row['notes'] ?: ''
